@@ -5,7 +5,7 @@ import Header from "@/components/Header";
 import BottomNav from "@/components/BottomNav";
 import CategoryFilter from "@/components/CategoryFilter";
 import ProductCard from "@/components/ProductCard";
-import { products, categories, getProductsByCategory } from "@/data/products";
+import { categories, getProductsByCategory } from "@/data/products";
 import styles from "./page.module.css";
 
 export default function Home() {

@@ -1,112 +1,210 @@
+import { FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Image } from 'expo-image';
-import { Platform, StyleSheet } from 'react-native';
-
-import { Collapsible } from '@/components/ui/collapsible';
-import { ExternalLink } from '@/components/external-link';
-import ParallaxScrollView from '@/components/parallax-scroll-view';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { useBookmarks } from '@/contexts/BookmarkContext';
+import { useCart } from '@/contexts/CartContext';
 import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
 import { IconSymbol } from '@/components/ui/icon-symbol';
-import { Fonts } from '@/constants/theme';
+import { Link } from 'expo-router';
+
+const PRODUCTS = [
+  {
+    id: '1',
+    name: 'Mandt T-Shirt',
+    price: 125.0,
+    category: 't-shirt',
+    image: '/products/mandt-tshirt.png',
+  },
+  {
+    id: '2',
+    name: 'Hand Sneak T-Shirt',
+    price: 118.0,
+    category: 't-shirt',
+    image: '/products/hand-sneak-tshirt.png',
+  },
+  {
+    id: '3',
+    name: 'Cuiar T-Shirt',
+    price: 109.0,
+    category: 't-shirt',
+    image: '/products/cuiar-tshirt.png',
+  },
+  {
+    id: '4',
+    name: 'Leon Dose Shirt',
+    price: 188.0,
+    category: 'shirt',
+    image: '/products/leon-dose-shirt.png',
+  },
+  {
+    id: '5',
+    name: 'Embroidery Gen Shirt',
+    price: 126.0,
+    category: 'shirt',
+    image: '/products/embroidery-gen-shirt.png',
+  },
+];
 
 export default function TabTwoScreen() {
-  return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#D0D0D0', dark: '#353636' }}
-      headerImage={
-        <IconSymbol
-          size={310}
-          color="#808080"
-          name="chevron.left.forwardslash.chevron.right"
-          style={styles.headerImage}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText
-          type="title"
-          style={{
-            fontFamily: Fonts.rounded,
-          }}>
-          Explore
-        </ThemedText>
-      </ThemedView>
-      <ThemedText>This app includes example code to help you get started.</ThemedText>
-      <Collapsible title="File-based routing">
-        <ThemedText>
-          This app has two screens:{' '}
-          <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> and{' '}
-          <ThemedText type="defaultSemiBold">app/(tabs)/explore.tsx</ThemedText>
-        </ThemedText>
-        <ThemedText>
-          The layout file in <ThemedText type="defaultSemiBold">app/(tabs)/_layout.tsx</ThemedText>{' '}
-          sets up the tab navigator.
-        </ThemedText>
-        <ExternalLink href="https://docs.expo.dev/router/introduction">
-          <ThemedText type="link">Learn more</ThemedText>
-        </ExternalLink>
-      </Collapsible>
-      <Collapsible title="Android, iOS, and web support">
-        <ThemedText>
-          You can open this project on Android, iOS, and the web. To open the web version, press{' '}
-          <ThemedText type="defaultSemiBold">w</ThemedText> in the terminal running this project.
-        </ThemedText>
-      </Collapsible>
-      <Collapsible title="Images">
-        <ThemedText>
-          For static images, you can use the <ThemedText type="defaultSemiBold">@2x</ThemedText> and{' '}
-          <ThemedText type="defaultSemiBold">@3x</ThemedText> suffixes to provide files for
-          different screen densities
-        </ThemedText>
-        <Image
-          source={require('@/assets/images/react-logo.png')}
-          style={{ width: 100, height: 100, alignSelf: 'center' }}
-        />
-        <ExternalLink href="https://reactnative.dev/docs/images">
-          <ThemedText type="link">Learn more</ThemedText>
-        </ExternalLink>
-      </Collapsible>
-      <Collapsible title="Light and dark mode components">
-        <ThemedText>
-          This template has light and dark mode support. The{' '}
-          <ThemedText type="defaultSemiBold">useColorScheme()</ThemedText> hook lets you inspect
-          what the user&apos;s current color scheme is, and so you can adjust UI colors accordingly.
-        </ThemedText>
-        <ExternalLink href="https://docs.expo.dev/develop/user-interface/color-themes/">
-          <ThemedText type="link">Learn more</ThemedText>
-        </ExternalLink>
-      </Collapsible>
-      <Collapsible title="Animations">
-        <ThemedText>
-          This template includes an example of an animated component. The{' '}
-          <ThemedText type="defaultSemiBold">components/HelloWave.tsx</ThemedText> component uses
-          the powerful{' '}
-          <ThemedText type="defaultSemiBold" style={{ fontFamily: Fonts.mono }}>
-            react-native-reanimated
-          </ThemedText>{' '}
-          library to create a waving hand animation.
-        </ThemedText>
-        {Platform.select({
-          ios: (
-            <ThemedText>
-              The <ThemedText type="defaultSemiBold">components/ParallaxScrollView.tsx</ThemedText>{' '}
-              component provides a parallax effect for the header image.
+  const { toggleBookmark, isBookmarked } = useBookmarks();
+  const { getQuantity: getCartQuantity, addToCart } = useCart();
+
+  const renderProduct = ({ item }: { item: typeof PRODUCTS[0] }) => {
+    const quantity = getCartQuantity(item.id);
+    return (
+      <View style={styles.productCard}>
+        <Link href={`/product/${item.id}`} style={styles.productLink}>
+          <View style={styles.productLinkContent}>
+            <View style={styles.imageContainer}>
+              <Image
+                source={require('@/assets/images/partial-react-logo.png')}
+                style={styles.productImage}
+                contentFit="cover"
+                transition={200}
+              />
+            </View>
+            <View style={styles.productInfo}>
+              <ThemedText type="default" style={styles.productName} numberOfLines={1}>
+                {item.name}
+              </ThemedText>
+              <Text style={styles.productPrice}>${item.price.toFixed(2)}</Text>
+            </View>
+          </View>
+        </Link>
+        <View style={styles.rightActions}>
+          {quantity > 0 && (
+            <ThemedText style={styles.cartIndicator}>
+              {quantity} in cart
             </ThemedText>
-          ),
-        })}
-      </Collapsible>
-    </ParallaxScrollView>
+          )}
+          <TouchableOpacity
+            style={[styles.bookmarkBtn, isBookmarked(item.id) && styles.bookmarkedBtn]}
+            onPress={() => toggleBookmark(item.id)}
+            accessibilityLabel={isBookmarked(item.id) ? `Remove ${item.name} from bookmarks` : `Save ${item.name} to bookmarks`}
+          >
+            <IconSymbol
+              name={isBookmarked(item.id) ? 'bookmark.fill' : 'bookmark'}
+              size={24}
+              color={isBookmarked(item.id) ? '#ef4444' : '#666'}
+            />
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.addCartBtn}
+            onPress={() => addToCart(item.id)}
+            accessibilityLabel={`Add ${item.name} to cart`}
+          >
+            <IconSymbol name="plus" size={24} color="#111" />
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  };
+
+  return (
+    <SafeAreaView style={styles.container} edges={['top']}>
+      <FlatList
+        data={PRODUCTS}
+        renderItem={renderProduct}
+        keyExtractor={(item) => item.id}
+        contentContainerStyle={styles.list}
+        ListHeaderComponent={
+          <ThemedText type="title" style={styles.headerTitle}>
+            Explore
+          </ThemedText>
+        }
+      />
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  headerImage: {
-    color: '#808080',
-    bottom: -90,
-    left: -35,
-    position: 'absolute',
+  container: {
+    flex: 1,
   },
-  titleContainer: {
+  headerTitle: {
+    fontSize: 32,
+    fontWeight: '700',
+    marginBottom: 20,
+    marginHorizontal: 20,
+  },
+  list: {
+    paddingHorizontal: 16,
+    paddingBottom: 100,
+  },
+  productCard: {
     flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f9f9f9',
+    borderRadius: 16,
+    padding: 12,
+    marginBottom: 12,
+    gap: 12,
+  },
+  productLink: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  productLinkContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    flex: 1,
+  },
+  imageContainer: {
+    borderRadius: 12,
+    overflow: 'hidden',
+    backgroundColor: '#eee',
+  },
+  productImage: {
+    width: 80,
+    height: 80,
+  },
+  productInfo: {
+    flex: 1,
+    gap: 4,
+  },
+  productName: {
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  productPrice: {
+    fontSize: 14,
+    color: '#666',
+    fontWeight: '500',
+  },
+  rightActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: 8,
+    position: 'relative',
+  },
+  cartIndicator: {
+    fontSize: 11,
+    color: '#ef4444',
+    fontWeight: '600',
+    backgroundColor: '#fef2f2',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 6,
+    position: 'absolute',
+    top: -8,
+    right: 60,
+  },
+  bookmarkBtn: {
+    padding: 6,
+  },
+  addCartBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: '#ddd',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#fff',
+  },
+  bookmarkedBtn: {
+    backgroundColor: '#fef2f2',
   },
 });

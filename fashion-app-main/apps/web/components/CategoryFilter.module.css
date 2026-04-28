@@ -21,8 +21,9 @@
   padding: var(--space-sm) var(--space-xl);
   border-radius: var(--radius-pill);
   border: 1.5px solid var(--color-border);
-  font-size: 14px;
-  font-weight: 500;
+  font-family: var(--font-sans);
+  font-size: var(--text-base);
+  font-weight: var(--font-medium);
   color: var(--color-text-primary);
   background: var(--color-bg);
   transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);

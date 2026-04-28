@@ -15,10 +15,11 @@
 
 .title {
   font-family: var(--font-sans);
-  font-size: 18px;
-  font-weight: 700;
+  font-size: var(--text-lg);
+  font-weight: var(--font-bold);
   letter-spacing: 2px;
   text-transform: uppercase;
+  line-height: var(--leading-none);
 }
 
 .iconBtn {

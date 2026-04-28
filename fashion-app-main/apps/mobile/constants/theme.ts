@@ -29,14 +29,16 @@ export const Colors = {
 
 export const Fonts = Platform.select({
   ios: {
-    /** iOS `UIFontDescriptorSystemDesignDefault` */
-    sans: 'system-ui',
-    /** iOS `UIFontDescriptorSystemDesignSerif` */
-    serif: 'ui-serif',
-    /** iOS `UIFontDescriptorSystemDesignRounded` */
+    sans: 'DM Sans',
+    serif: 'Georgia',
     rounded: 'ui-rounded',
-    /** iOS `UIFontDescriptorSystemDesignMonospaced` */
     mono: 'ui-monospace',
+  },
+  android: {
+    sans: 'DM Sans',
+    serif: 'serif',
+    rounded: 'normal',
+    mono: 'monospace',
   },
   default: {
     sans: 'normal',
@@ -45,9 +47,9 @@ export const Fonts = Platform.select({
     mono: 'monospace',
   },
   web: {
-    sans: "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
-    serif: "Georgia, 'Times New Roman', serif",
-    rounded: "'SF Pro Rounded', 'Hiragino Maru Gothic ProN', Meiryo, 'MS PGothic', sans-serif",
-    mono: "SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace",
+    sans: 'DM Sans, Helvetica Neue, Helvetica, Arial, sans-serif',
+    serif: 'Georgia, Times New Roman, serif',
+    rounded: 'SF Pro Rounded, Hiragino Maru Gothic ProN, Meiryo, MS PGothic, sans-serif',
+    mono: 'SFMono-Regular, Menlo, Monaco, Consolas, Liberation Mono, Courier New, monospace',
   },
 });

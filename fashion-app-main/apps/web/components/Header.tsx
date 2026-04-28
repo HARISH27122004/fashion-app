@@ -34,11 +34,11 @@ export default function Header({
         <h1 className={styles.title}>{title || "WELCOME"}</h1>
 
         {showBookmark ? (
-          <button className={styles.iconBtn} aria-label="Bookmark" id="header-bookmark">
+          <Link href="/bookmarks" className={styles.iconBtn} aria-label="Bookmarks" id="header-bookmark">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M19 21l-7-5-7 5V5a2 2 0 012-2h10a2 2 0 012 2z" />
             </svg>
-          </button>
+          </Link>
         ) : (
           <button className={styles.iconBtn} aria-label="Search" id="header-search">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

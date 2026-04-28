@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useCart } from "@/contexts/CartContext";
 import styles from "./BottomNav.module.css";
 
 const navItems = [
@@ -25,6 +26,18 @@ const navItems = [
     ),
   },
   {
+    label: "Cart",
+    href: "/cart",
+    icon: (
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z" />
+        <line x1="3" y1="6" x2="21" y2="6" />
+        <path d="M16 10a4 4 0 01-8 0" />
+      </svg>
+    ),
+    showBadge: true,
+  },
+  {
     label: "Notifications",
     href: "/notifications",
     icon: (
@@ -45,21 +58,11 @@ const navItems = [
       </svg>
     ),
   },
-  {
-    label: "Cart",
-    href: "/cart",
-    icon: (
-      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z" />
-        <line x1="3" y1="6" x2="21" y2="6" />
-        <path d="M16 10a4 4 0 01-8 0" />
-      </svg>
-    ),
-  },
 ];
 
 export default function BottomNav() {
   const pathname = usePathname();
+  const { totalItems } = useCart();
 
   return (
     <nav className={styles.nav} id="bottom-navigation">
@@ -77,7 +80,12 @@ export default function BottomNav() {
               aria-label={item.label}
               id={`nav-${item.label.toLowerCase()}`}
             >
-              <span className={styles.icon}>{item.icon}</span>
+              <span className={styles.iconWrap}>
+                <span className={styles.icon}>{item.icon}</span>
+                {item.showBadge && totalItems > 0 && (
+                  <span className={styles.badge}>{totalItems}</span>
+                )}
+              </span>
             </Link>
           );
         })}

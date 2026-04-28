@@ -18,13 +18,38 @@
   --color-border: #e5e5e5;
   --color-accent: #ff6b35;
   --color-stock: #22c55e;
+  --color-red: #ef4444;
   --color-white: #ffffff;
   --color-black: #111111;
 
-  /* Typography */
-  --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
-    sans-serif;
-  --font-display: "Playfair Display", Georgia, "Times New Roman", serif;
+  /* Typography Scale */
+  --font-sans: 'DM Sans', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  --font-display: 'Playfair Display', Georgia, 'Times New Roman', serif;
+
+  /* Font weights */
+  --font-light: 300;
+  --font-regular: 400;
+  --font-medium: 500;
+  --font-semibold: 600;
+  --font-bold: 700;
+
+  /* Font sizes - Desktop (default) */
+  --text-xs: 12px;
+  --text-sm: 14px;
+  --text-base: 16px;
+  --text-lg: 18px;
+  --text-xl: 20px;
+  --text-2xl: 24px;
+  --text-3xl: 32px;
+  --text-4xl: 42px;
+  --text-5xl: 56px;
+
+  /* Line heights */
+  --leading-none: 1;
+  --leading-tight: 1.1;
+  --leading-snug: 1.2;
+  --leading-normal: 1.5;
+  --leading-relaxed: 1.7;
 
   /* Spacing */
   --space-xs: 4px;
@@ -61,36 +86,109 @@ html {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
+  font-family: var(--font-sans);
+  font-weight: var(--font-regular);
+  line-height: var(--leading-normal);
+  font-size: var(--text-base);
+  color: var(--color-text-primary);
+  background-color: var(--color-bg);
 }
 
 body {
   font-family: var(--font-sans);
+  font-weight: var(--font-regular);
+  line-height: var(--leading-normal);
   color: var(--color-text-primary);
   background-color: var(--color-bg);
-  line-height: 1.5;
   overflow-x: hidden;
 }
 
+/* Typography scale for all headings */
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-sans);
+  font-weight: var(--font-bold);
+  line-height: var(--leading-tight);
+  color: var(--color-text-primary);
+  margin: 0;
+}
+
+h1 {
+  font-size: var(--text-5xl);
+  line-height: var(--leading-none);
+}
+
+h2 {
+  font-size: var(--text-4xl);
+  line-height: var(--leading-snug);
+}
+
+h3 {
+  font-size: var(--text-3xl);
+  line-height: var(--leading-snug);
+}
+
+h4 {
+  font-size: var(--text-2xl);
+  line-height: var(--leading-tight);
+}
+
+h5 {
+  font-size: var(--text-lg);
+  line-height: var(--leading-normal);
+}
+
+h6 {
+  font-size: var(--text-base);
+  line-height: var(--leading-normal);
+}
+
+/* Body text */
+p {
+  font-family: var(--font-sans);
+  font-weight: var(--font-regular);
+  line-height: var(--leading-relaxed);
+  color: var(--color-text-primary);
+  margin: 0;
+}
+
+/* Links */
 a {
   color: inherit;
   text-decoration: none;
 }
 
+/* Buttons */
 button {
+  font-family: var(--font-sans);
+  font-weight: var(--font-medium);
+  line-height: var(--leading-none);
+  color: inherit;
   border: none;
   background: none;
   cursor: pointer;
-  font-family: inherit;
 }
 
-img {
-  display: block;
-  max-width: 100%;
+/* Inputs */
+input, textarea, select {
+  font-family: var(--font-sans);
+  font-weight: var(--font-regular);
+  line-height: var(--leading-normal);
+  color: var(--color-text-primary);
 }
 
-ul,
-ol {
-  list-style: none;
+/* Labels */
+label {
+  font-family: var(--font-sans);
+  font-weight: var(--font-medium);
+  font-size: var(--text-sm);
+  color: var(--color-text-primary);
+}
+
+/* Small text */
+small, .text-sm, .text-xs {
+  font-family: var(--font-sans);
+  font-weight: var(--font-regular);
+  line-height: var(--leading-normal);
 }
 
 /* ===== Scrollbar ===== */
@@ -162,5 +260,36 @@ ol {
   to {
     opacity: 1;
     transform: translateX(0);
+  }
+}
+
+/* ===== Responsive Typography ===== */
+@media (max-width: 768px) {
+  :root {
+    /* Mobile font sizes */
+    --text-xs: 11px;
+    --text-sm: 13px;
+    --text-base: 15px;
+    --text-lg: 17px;
+    --text-xl: 19px;
+    --text-2xl: 28px;
+    --text-3xl: 22px;
+    --text-4xl: 28px;
+    --text-5xl: 36px;
+  }
+}
+
+@media (min-width: 769px) and (max-width: 1024px) {
+  :root {
+    /* Tablet font sizes */
+    --text-xs: 12px;
+    --text-sm: 13px;
+    --text-base: 15px;
+    --text-lg: 17px;
+    --text-xl: 19px;
+    --text-2xl: 26px;
+    --text-3xl: 28px;
+    --text-4xl: 36px;
+    --text-5xl: 48px;
   }
 }

@@ -5,12 +5,16 @@ import { useParams } from "next/navigation";
 import Image from "next/image";
 import Header from "@/components/Header";
 import { getProductById } from "@/data/products";
+import { useBookmarks } from "@/contexts/BookmarkContext";
+import { useCart } from "@/contexts/CartContext";
 import styles from "./page.module.css";
 
 export default function ProductDetail() {
   const params = useParams();
   const product = getProductById(params.id as string);
   const [selectedSize, setSelectedSize] = useState<string | null>(null);
+  const { isBookmarked, toggleBookmark } = useBookmarks();
+  const { addToCart, getQuantity } = useCart();
 
   if (!product) {
     return (
@@ -22,6 +26,9 @@ export default function ProductDetail() {
       </>
     );
   }
+
+  const bookmarked = isBookmarked(product.id);
+  const quantity = getQuantity(product.id);
 
   return (
     <>
@@ -80,16 +87,42 @@ export default function ProductDetail() {
           <span className={styles.bottomPrice}>
             ${product.price.toFixed(2)}
           </span>
-          <button
-            className={styles.bottomAddBtn}
-            aria-label="Add to cart"
-            id="add-to-cart-detail"
-          >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <line x1="12" y1="5" x2="12" y2="19" />
-              <line x1="5" y1="12" x2="19" y2="12" />
-            </svg>
-          </button>
+          <div className={styles.bottomActions}>
+            <button
+              className={`${styles.cartBtn}`}
+              aria-label={quantity > 0 ? `Add more ${product.name} to cart (${quantity} in cart)` : `Add ${product.name} to cart`}
+              id="add-to-cart-detail"
+              onClick={() => addToCart(product.id)}
+            >
+              {quantity > 0 ? (
+                <span className={styles.quantityBadge}>{quantity}</span>
+              ) : (
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="12" y1="5" x2="12" y2="19" />
+                  <line x1="5" y1="12" x2="19" y2="12" />
+                </svg>
+              )}
+            </button>
+            <button
+              className={`${styles.bookmarkBtn} ${bookmarked ? styles.bookmarked : ""}`}
+              aria-label={bookmarked ? `Remove ${product.name} from bookmarks` : `Save ${product.name} to bookmarks`}
+              id="bookmark-detail"
+              onClick={() => toggleBookmark(product.id)}
+            >
+              <svg
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill={bookmarked ? "currentColor" : "none"}
+                stroke="currentColor"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M19 21l-7-5-7 5V5a2 2 0 012-2h10a2 2 0 012 2z" />
+              </svg>
+            </button>
+          </div>
         </div>
       </div>
     </>

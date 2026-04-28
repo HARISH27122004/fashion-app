@@ -47,8 +47,9 @@
 }
 
 .name {
-  font-size: 13px;
-  font-weight: 600;
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  font-weight: var(--font-semibold);
   color: var(--color-text-primary);
   white-space: nowrap;
   overflow: hidden;
@@ -61,8 +62,9 @@
 }
 
 .stock {
-  font-size: 11px;
-  font-weight: 500;
+  font-family: var(--font-sans);
+  font-size: var(--text-xs);
+  font-weight: var(--font-medium);
   color: var(--color-text-tertiary);
   white-space: nowrap;
   flex-shrink: 0;
@@ -81,9 +83,56 @@
   padding: 6px 16px;
   border-radius: var(--radius-pill);
   border: 1.5px solid var(--color-border);
-  font-size: 13px;
-  font-weight: 600;
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  font-weight: var(--font-semibold);
   color: var(--color-text-primary);
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.cartBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-full);
+  border: 1.5px solid var(--color-border);
+  background: transparent;
+  color: var(--color-text-primary);
+  cursor: pointer;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.cartBtn:hover {
+  background: var(--color-accent);
+  color: var(--color-white);
+  border-color: var(--color-accent);
+  transform: scale(1.1);
+}
+
+.cartBtn:active {
+  transform: scale(0.95);
+}
+
+.quantityBadge {
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  font-weight: var(--font-bold);
+  color: var(--color-white);
+  background: var(--color-accent);
+  min-width: 20px;
+  height: 20px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 6px;
 }
 
 .addBtn {
@@ -107,4 +156,33 @@
 
 .addBtn:active {
   transform: scale(0.95);
+}
+
+.bookmarkBtn {
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-full);
+  border: 1.5px solid var(--color-border);
+  background: transparent;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-text-tertiary);
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  cursor: pointer;
+}
+
+.bookmarkBtn:hover {
+  color: var(--color-red);
+  border-color: var(--color-red);
+}
+
+.bookmarkBtn.bookmarked {
+  color: var(--color-red);
+  border-color: var(--color-red);
+}
+
+.bookmarkBtn.bookmarked:hover {
+  background: var(--color-red);
+  color: var(--color-white);
 }
