@@ -30,7 +30,7 @@ export const products: Product[] = [
     inStock: true,
     sizes: ["S", "M", "L", "XL", "2XL"],
     description:
-      "A bold expression of urban artistry, the Hand Sneak T-Shirt features dynamic blue brush strokes across a premium cream canvas. Crafted from heavyweight cotton for a structured, oversized silhouette that defines modern streetwear.",
+      "A bold expression of urban artistry, the Hand Sne.ak T-Shirt features dynamic blue brush strokes across a premium cream canvas. Crafted from heavyweight cotton for a structured, oversized silhouette that defines modern streetwear.",
   },
   {
     id: "3",

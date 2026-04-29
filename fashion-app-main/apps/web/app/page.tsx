@@ -1,16 +1,46 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Header from "@/components/Header";
 import BottomNav from "@/components/BottomNav";
 import CategoryFilter from "@/components/CategoryFilter";
 import ProductCard from "@/components/ProductCard";
-import { categories, getProductsByCategory } from "@/data/products";
+import { categories } from "@/data/products";
+import { supabase } from "@/lib/supabase";
 import styles from "./page.module.css";
 
 export default function Home() {
   const [selectedCategory, setSelectedCategory] = useState("all");
-  const filteredProducts = getProductsByCategory(selectedCategory);
+  const [products, setProducts] = useState<any[]>([]);
+
+  useEffect(() => {
+    fetchProducts();
+  }, []);
+
+  async function fetchProducts() {
+    const { data, error } = await supabase.from("products").select("*");
+
+    if (error) {
+      console.log(error);
+      return;
+    }
+
+    if (data) {
+      setProducts(
+        data.map((item) => ({
+          ...item,
+          id: String(item.id),
+        }))
+      );
+    }
+  }
+
+  const filteredProducts =
+    selectedCategory === "all"
+      ? products
+      : products.filter(
+          (product) => product.category === selectedCategory
+        );
 
   return (
     <>

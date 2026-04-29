@@ -1,0 +1,83 @@
+.main {
+  min-height: 100vh;
+  padding: 24px 18px 120px;
+}
+
+.card {
+  max-width: 520px;
+  margin: 0 auto;
+  background: #ffffff;
+  border-radius: 24px;
+  padding: 24px;
+  box-shadow: rgba(0, 0, 0, 0.24) 0px 3px 8px;
+}
+
+.heading {
+  font-size: 28px;
+  font-weight: 700;
+  margin: 0;
+  color: #111111;
+}
+
+.subtext {
+  margin: 8px 0 24px;
+  font-size: 14px;
+  color: #777777;
+}
+
+.formGroup {
+  margin-bottom: 16px;
+}
+
+.label {
+  display: block;
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 8px;
+  color: #111111;
+}
+
+.input,
+.textarea {
+  width: 100%;
+  border: 1px solid #e3e3e3;
+  border-radius: 14px;
+  padding: 14px 16px;
+  font-size: 15px;
+  outline: none;
+  background: #fafafa;
+  transition: 0.2s ease;
+}
+
+.input:focus,
+.textarea:focus {
+  border-color: #111111;
+  background: #ffffff;
+}
+
+.textarea {
+  min-height: 110px;
+  resize: none;
+}
+
+.button {
+  width: 100%;
+  border: none;
+  border-radius: 16px;
+  padding: 16px;
+  margin-top: 10px;
+  background: #111111;
+  color: #ffffff;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: 0.2s ease;
+}
+
+.button:hover {
+  opacity: 0.92;
+}
+
+.button:active {
+  transform: scale(0.98);
+}
