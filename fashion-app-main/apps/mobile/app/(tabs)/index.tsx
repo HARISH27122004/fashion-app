@@ -1,125 +1,201 @@
-import { useEffect, useState } from 'react';
-import { FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import {
+  ActivityIndicator,
+  FlatList,
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 import { Image } from 'expo-image';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Link } from 'expo-router';
-import { ThemedView } from '@/components/themed-view';
+import { useRouter } from 'expo-router';
+
 import { ThemedText } from '@/components/themed-text';
 import { IconSymbol } from '@/components/ui/icon-symbol';
-import { useBookmarks } from '@/contexts/BookmarkContext';
-import { useCart } from '@/contexts/CartContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
-import { Product } from '@/types/product';
+import {
+  categories,
+  formatPrice,
+  getCategoryLabel,
+  getProductImageSource,
+  normalizeProducts,
+} from '@/lib/products';
+import type { Product } from '@/types/product';
 
 export default function HomeScreen() {
-  const { toggleBookmark, isBookmarked } = useBookmarks();
-  const { addToCart, getQuantity: getCartQuantity } = useCart();
+  const router = useRouter();
+  const { user, signOut } = useAuth();
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState('all');
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  useEffect(() => {
-    fetchProducts();
-  }, []);
+  const fetchProducts = useCallback(async () => {
+    setErrorMessage(null);
 
-  async function fetchProducts() {
     const { data, error } = await supabase.from('products').select('*');
 
     if (error) {
-      console.error('Error fetching products:', error);
+      setErrorMessage(error.message);
       setLoading(false);
+      setRefreshing(false);
       return;
     }
 
-    if (data) {
-      setProducts(
-        data.map((item) => ({
-          ...item,
-          id: String(item.id),
-          sizes: item.sizes || ['S', 'M', 'L', 'XL'],
-        }))
-      );
-    }
+    setProducts(normalizeProducts(data));
     setLoading(false);
-  }
+    setRefreshing(false);
+  }, []);
+
+  useEffect(() => {
+    fetchProducts();
+  }, [fetchProducts]);
+
+  const categoryOptions = useMemo(
+    () =>
+      categories.filter(
+        (category) =>
+          category.value === 'all' || products.some((product) => product.category === category.value)
+      ),
+    [products]
+  );
+
+  const filteredProducts = useMemo(
+    () =>
+      selectedCategory === 'all'
+        ? products
+        : products.filter((product) => product.category === selectedCategory),
+    [products, selectedCategory]
+  );
+
+  const handleRefresh = useCallback(() => {
+    setRefreshing(true);
+    fetchProducts();
+  }, [fetchProducts]);
+
+  const handleSignOut = useCallback(async () => {
+    try {
+      await signOut();
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : 'Unable to sign out.');
+    }
+  }, [signOut]);
 
   const renderProduct = ({ item }: { item: Product }) => {
-    const quantity = getCartQuantity(item.id);
     return (
-      <View style={styles.productCard}>
-        <Link href={`/product/${item.id}`} style={styles.productLink}>
-          <View style={styles.productLinkContent}>
-            <View style={styles.imageContainer}>
-              <Image
-                source={require('@/assets/images/partial-react-logo.png')}
-                style={styles.productImage}
-                contentFit="cover"
-                transition={200}
-              />
-            </View>
-            <View style={styles.productInfo}>
-              <ThemedText type="default" style={styles.productName} numberOfLines={1}>
-                {item.name}
-              </ThemedText>
-              <Text style={styles.productPrice}>${item.price.toFixed(2)}</Text>
-            </View>
-          </View>
-        </Link>
-        <View style={styles.rightActions}>
-          {quantity > 0 && (
-            <ThemedText style={styles.cartIndicator}>
-              {quantity} in cart
-            </ThemedText>
-          )}
-          <TouchableOpacity
-            style={[styles.bookmarkBtn, isBookmarked(item.id) && styles.bookmarkedBtn]}
-            onPress={() => toggleBookmark(item.id)}
-            accessibilityLabel={isBookmarked(item.id) ? `Remove ${item.name} from bookmarks` : `Save ${item.name} to bookmarks`}
-          >
-            <IconSymbol
-              name={isBookmarked(item.id) ? 'bookmark.fill' : 'bookmark'}
-              size={24}
-              color={isBookmarked(item.id) ? '#ef4444' : '#666'}
-            />
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.addCartBtn}
-            onPress={() => addToCart(item.id)}
-            accessibilityLabel={`Add ${item.name} to cart`}
-          >
-            <IconSymbol name="plus" size={24} color="#111" />
-          </TouchableOpacity>
+      <TouchableOpacity
+        activeOpacity={0.86}
+        onPress={() => router.push({ pathname: '/product/[id]', params: { id: item.id } })}
+        style={styles.productCard}
+      >
+        <View style={styles.imageContainer}>
+          <Image
+            source={getProductImageSource(item.image)}
+            style={styles.productImage}
+            contentFit="cover"
+            transition={200}
+          />
         </View>
-      </View>
+        <View style={styles.productInfo}>
+          <View style={styles.metaRow}>
+            <Text style={styles.categoryText}>{getCategoryLabel(item.category)}</Text>
+            <Text style={[styles.stockText, !item.inStock && styles.stockTextMuted]}>
+              {item.inStock ? 'In stock' : 'Sold out'}
+            </Text>
+          </View>
+          <ThemedText type="default" style={styles.productName} numberOfLines={2}>
+            {item.name}
+          </ThemedText>
+          <Text style={styles.productPrice}>{formatPrice(item.price)}</Text>
+        </View>
+      </TouchableOpacity>
     );
   };
 
-  if (loading) {
-    return (
-      <SafeAreaView style={styles.container} edges={['top']}>
-        <ThemedView style={styles.header}>
-          <ThemedText type="title">Welcome</ThemedText>
-        </ThemedView>
-        <View style={{ padding: 20 }}>
-          <ThemedText>Loading products...</ThemedText>
-        </View>
-      </SafeAreaView>
-    );
-  }
-
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      <ThemedView style={styles.header}>
-        <ThemedText type="title">Welcome</ThemedText>
-      </ThemedView>
+      <View style={styles.header}>
+        <View style={styles.headerText}>
+          <Text style={styles.welcomeText}>Welcome</Text>
+          <ThemedText type="title" style={styles.title}>
+            Latest Fashion
+          </ThemedText>
+          {user?.email && (
+            <Text style={styles.emailText} numberOfLines={1}>
+              {user.email}
+            </Text>
+          )}
+        </View>
+        <TouchableOpacity
+          accessibilityLabel="Sign out"
+          activeOpacity={0.75}
+          onPress={handleSignOut}
+          style={styles.signOutButton}
+        >
+          <IconSymbol name="rectangle.portrait.and.arrow.right" size={21} color="#111111" />
+        </TouchableOpacity>
+      </View>
       <FlatList
-        data={products}
+        data={filteredProducts}
         renderItem={renderProduct}
         keyExtractor={(item) => item.id}
+        numColumns={2}
+        columnWrapperStyle={styles.gridRow}
         contentContainerStyle={styles.list}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />}
         ListHeaderComponent={
-          <ThemedText style={styles.subtitle}>
-            Discover the latest fashion
-          </ThemedText>
+          <View>
+            <Text style={styles.subtitle}>Discover curated pieces from the web catalog.</Text>
+
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.categoryList}
+            >
+              {categoryOptions.map((category) => {
+                const selected = selectedCategory === category.value;
+
+                return (
+                  <TouchableOpacity
+                    activeOpacity={0.8}
+                    key={category.value}
+                    onPress={() => setSelectedCategory(category.value)}
+                    style={[styles.categoryChip, selected && styles.categoryChipActive]}
+                  >
+                    <Text style={[styles.categoryChipText, selected && styles.categoryChipTextActive]}>
+                      {category.label}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
+
+            {errorMessage && (
+              <View style={styles.errorBanner}>
+                <Text style={styles.errorText}>{errorMessage}</Text>
+                <TouchableOpacity onPress={fetchProducts}>
+                  <Text style={styles.retryText}>Retry</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+          </View>
+        }
+        ListEmptyComponent={
+          <View style={styles.emptyState}>
+            {loading ? (
+              <ActivityIndicator color="#111111" />
+            ) : (
+              <>
+                <ThemedText type="subtitle">No products found</ThemedText>
+                <Text style={styles.emptyText}>Try another category or pull to refresh.</Text>
+              </>
+            )}
+          </View>
         }
       />
     </SafeAreaView>
@@ -129,95 +205,172 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: '#f5f7fa',
   },
   header: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     paddingHorizontal: 20,
-    paddingTop: 20,
-    paddingBottom: 10,
+    paddingTop: 12,
+    paddingBottom: 16,
+  },
+  headerText: {
+    flex: 1,
+    paddingRight: 16,
+  },
+  welcomeText: {
+    color: '#2f6f6d',
+    fontSize: 13,
+    fontWeight: '800',
+    letterSpacing: 0,
+    marginBottom: 4,
+    textTransform: 'uppercase',
+  },
+  title: {
+    color: '#111111',
+    lineHeight: 36,
+  },
+  emailText: {
+    color: '#68717d',
+    fontSize: 13,
+    marginTop: 6,
+  },
+  signOutButton: {
+    alignItems: 'center',
+    backgroundColor: '#ffffff',
+    borderColor: '#e0e5eb',
+    borderRadius: 22,
+    borderWidth: 1,
+    height: 44,
+    justifyContent: 'center',
+    width: 44,
   },
   subtitle: {
     fontSize: 16,
-    color: '#666',
-    marginBottom: 16,
+    color: '#59616b',
+    lineHeight: 23,
+    marginBottom: 14,
   },
   list: {
     paddingHorizontal: 16,
     paddingBottom: 100,
   },
-  productCard: {
-    flexDirection: 'row',
+  categoryList: {
+    gap: 10,
+    paddingBottom: 18,
+  },
+  categoryChip: {
+    backgroundColor: '#ffffff',
+    borderColor: '#dfe4ea',
+    borderRadius: 8,
+    borderWidth: 1,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+  },
+  categoryChipActive: {
+    backgroundColor: '#111111',
+    borderColor: '#111111',
+  },
+  categoryChipText: {
+    color: '#4d5661',
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  categoryChipTextActive: {
+    color: '#ffffff',
+  },
+  errorBanner: {
     alignItems: 'center',
-    backgroundColor: '#f9f9f9',
-    borderRadius: 16,
+    backgroundColor: '#fff2f0',
+    borderColor: '#ffd0ca',
+    borderRadius: 8,
+    borderWidth: 1,
+    flexDirection: 'row',
+    gap: 12,
+    justifyContent: 'space-between',
+    marginBottom: 16,
     padding: 12,
-    marginBottom: 12,
-    gap: 12,
   },
-  productLink: {
+  errorText: {
+    color: '#9f2a1d',
     flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
+    fontSize: 13,
+    lineHeight: 18,
   },
-  productLinkContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    flex: 1,
+  retryText: {
+    color: '#111111',
+    fontSize: 13,
+    fontWeight: '800',
+  },
+  gridRow: {
+    justifyContent: 'space-between',
+  },
+  productCard: {
+    backgroundColor: '#ffffff',
+    borderColor: '#e3e7ec',
+    borderRadius: 8,
+    borderWidth: 1,
+    marginBottom: 14,
+    overflow: 'hidden',
+    width: '48.5%',
   },
   imageContainer: {
-    borderRadius: 12,
-    overflow: 'hidden',
-    backgroundColor: '#eee',
+    aspectRatio: 1,
+    backgroundColor: '#eef1f5',
+    width: '100%',
   },
   productImage: {
-    width: 80,
-    height: 80,
+    height: '100%',
+    width: '100%',
   },
   productInfo: {
+    gap: 7,
+    padding: 12,
+  },
+  metaRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 8,
+  },
+  categoryText: {
+    color: '#2f6f6d',
     flex: 1,
-    gap: 4,
+    fontSize: 11,
+    fontWeight: '800',
+    textTransform: 'uppercase',
+  },
+  stockText: {
+    color: '#16803d',
+    fontSize: 11,
+    fontWeight: '800',
+  },
+  stockTextMuted: {
+    color: '#a23c35',
   },
   productName: {
+    color: '#111111',
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '800',
+    lineHeight: 21,
+    minHeight: 42,
   },
   productPrice: {
-    fontSize: 14,
-    color: '#666',
-    fontWeight: '500',
+    color: '#111111',
+    fontSize: 15,
+    fontWeight: '800',
   },
-  rightActions: {
-    flexDirection: 'row',
+  emptyState: {
     alignItems: 'center',
-    gap: 8,
-    position: 'relative',
-  },
-  cartIndicator: {
-    fontSize: 11,
-    color: '#ef4444',
-    fontWeight: '600',
-    backgroundColor: '#fef2f2',
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 6,
-    position: 'absolute',
-    top: -8,
-    right: 60,
-  },
-  bookmarkBtn: {
-    padding: 6,
-  },
-  addCartBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    borderWidth: 1,
-    borderColor: '#ddd',
-    alignItems: 'center',
+    minHeight: 260,
     justifyContent: 'center',
-    backgroundColor: '#fff',
+    paddingHorizontal: 20,
   },
-  bookmarkedBtn: {
-    backgroundColor: '#fef2f2',
+  emptyText: {
+    color: '#68717d',
+    fontSize: 14,
+    marginTop: 8,
+    textAlign: 'center',
   },
 });

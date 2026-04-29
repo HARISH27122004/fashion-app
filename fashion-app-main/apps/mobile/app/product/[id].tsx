@@ -1,86 +1,124 @@
-import { useEffect, useState } from 'react';
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useCallback, useEffect, useState } from 'react';
+import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Image } from 'expo-image';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useLocalSearchParams } from 'expo-router';
-import { useBookmarks } from '@/contexts/BookmarkContext';
-import { useCart } from '@/contexts/CartContext';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+
 import { ThemedText } from '@/components/themed-text';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { supabase } from '@/lib/supabase';
-import { Product } from '@/types/product';
+import {
+  formatPrice,
+  getCategoryLabel,
+  getProductImageSource,
+  normalizeProduct,
+} from '@/lib/products';
+import type { Product } from '@/types/product';
 
 export default function ProductDetailScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const router = useRouter();
+  const { id } = useLocalSearchParams<{ id?: string }>();
   const [product, setProduct] = useState<Product | null>(null);
   const [selectedSize, setSelectedSize] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const { isBookmarked, toggleBookmark } = useBookmarks();
-  const { addToCart, getQuantity } = useCart();
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  useEffect(() => {
-    fetchProduct();
-  }, [id]);
+  const fetchProduct = useCallback(async () => {
+    if (!id) {
+      setErrorMessage('Product id is missing.');
+      setLoading(false);
+      return;
+    }
 
-  async function fetchProduct() {
-    const { data, error } = await supabase
-      .from('products')
-      .select('*')
-      .eq('id', id)
-      .single();
+    setLoading(true);
+    setErrorMessage(null);
+
+    const { data, error } = await supabase.from('products').select('*').eq('id', id).single();
 
     if (error) {
-      console.error('Error fetching product:', error);
+      setErrorMessage(error.message);
+      setProduct(null);
       setLoading(false);
       return;
     }
 
     if (data) {
-      setProduct({
-        ...data,
-        id: String(data.id),
-        sizes: data.sizes || ['S', 'M', 'L', 'XL'],
-      } as Product);
+      const nextProduct = normalizeProduct(data);
+      setProduct(nextProduct);
+      setSelectedSize(nextProduct.sizes[0] ?? null);
     }
+
     setLoading(false);
-  }
+  }, [id]);
+
+  useEffect(() => {
+    fetchProduct();
+  }, [fetchProduct]);
+
+  const handleBack = useCallback(() => {
+    if (router.canGoBack()) {
+      router.back();
+      return;
+    }
+
+    router.replace('/');
+  }, [router]);
 
   if (loading) {
     return (
-      <SafeAreaView style={styles.container}>
-        <ThemedText>Loading...</ThemedText>
+      <SafeAreaView style={styles.centeredContainer}>
+        <ActivityIndicator color="#111111" />
       </SafeAreaView>
     );
   }
 
   if (!product) {
     return (
-      <SafeAreaView style={styles.container}>
-        <ThemedText>Product not found</ThemedText>
+      <SafeAreaView style={styles.centeredContainer}>
+        <TouchableOpacity activeOpacity={0.75} onPress={handleBack} style={styles.backButton}>
+          <IconSymbol name="chevron.left" size={24} color="#111111" />
+        </TouchableOpacity>
+        <ThemedText type="subtitle">Product not found</ThemedText>
+        {errorMessage && <Text style={styles.errorText}>{errorMessage}</Text>}
+        <TouchableOpacity activeOpacity={0.8} onPress={fetchProduct} style={styles.retryButton}>
+          <Text style={styles.retryText}>Retry</Text>
+        </TouchableOpacity>
       </SafeAreaView>
     );
   }
 
-  const bookmarked = isBookmarked(product.id);
-  const quantity = getQuantity(product.id);
-
   return (
-    <SafeAreaView style={styles.container} edges={['bottom']}>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
+      <View style={styles.header}>
+        <TouchableOpacity activeOpacity={0.75} onPress={handleBack} style={styles.backButton}>
+          <IconSymbol name="chevron.left" size={24} color="#111111" />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>Details</Text>
+        <View style={styles.headerSpacer} />
+      </View>
+
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <View style={styles.imageContainer}>
           <Image
-            source={require('@/assets/images/partial-react-logo.png')}
+            source={getProductImageSource(product.image)}
             style={styles.productImage}
             contentFit="cover"
+            transition={200}
           />
         </View>
 
         <View style={styles.content}>
+          <View style={styles.metaRow}>
+            <Text style={styles.categoryBadge}>{getCategoryLabel(product.category)}</Text>
+            <Text style={[styles.stockBadge, !product.inStock && styles.stockBadgeMuted]}>
+              {product.inStock ? 'In Stock' : 'Sold Out'}
+            </Text>
+          </View>
+
           <View style={styles.titleRow}>
             <ThemedText type="title" style={styles.productName}>
               {product.name}
             </ThemedText>
-            <ThemedText style={styles.stockBadge}>In Stock</ThemedText>
           </View>
 
           <View style={styles.sizesSection}>
@@ -121,35 +159,12 @@ export default function ProductDetailScreen() {
 
       <View style={styles.bottomBar}>
         <View style={styles.bottomLeft}>
-          <ThemedText style={styles.bottomPrice}>${product.price.toFixed(2)}</ThemedText>
+          <Text style={styles.bottomLabel}>Price</Text>
+          <ThemedText style={styles.bottomPrice}>{formatPrice(product.price)}</ThemedText>
         </View>
-        <View style={styles.bottomActions}>
-          <TouchableOpacity
-            style={styles.bookmarkBtn}
-            onPress={() => toggleBookmark(product.id)}
-          >
-            <IconSymbol
-              name={bookmarked ? 'bookmark.fill' : 'bookmark'}
-              size={24}
-              color={bookmarked ? '#ef4444' : '#000'}
-            />
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.addCartBtn, quantity > 0 && styles.addCartBtnActive]}
-            onPress={() => addToCart(product.id)}
-          >
-            <IconSymbol
-              name="plus"
-              size={24}
-              color={quantity > 0 ? '#fff' : '#000'}
-            />
-            {quantity > 0 && (
-              <View style={styles.cartQtyBadge}>
-                <Text style={styles.cartQtyText}>{quantity}</Text>
-              </View>
-            )}
-          </TouchableOpacity>
-        </View>
+        <Text style={[styles.bottomStock, !product.inStock && styles.bottomStockMuted]}>
+          {product.inStock ? 'Available' : 'Unavailable'}
+        </Text>
       </View>
     </SafeAreaView>
   );
@@ -158,15 +173,50 @@ export default function ProductDetailScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: '#f5f7fa',
+  },
+  centeredContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 14,
+    backgroundColor: '#f5f7fa',
+    padding: 24,
+  },
+  header: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingBottom: 12,
+  },
+  backButton: {
+    alignItems: 'center',
+    backgroundColor: '#ffffff',
+    borderColor: '#e0e5eb',
+    borderRadius: 22,
+    borderWidth: 1,
+    height: 44,
+    justifyContent: 'center',
+    width: 44,
+  },
+  headerTitle: {
+    color: '#111111',
+    fontSize: 16,
+    fontWeight: '800',
+  },
+  headerSpacer: {
+    width: 44,
   },
   scrollContent: {
-    paddingBottom: 100,
+    paddingBottom: 124,
   },
   imageContainer: {
-    width: '100%',
     aspectRatio: 4 / 4.5,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: '#eef1f5',
+    marginHorizontal: 16,
+    overflow: 'hidden',
+    borderRadius: 8,
   },
   productImage: {
     width: '100%',
@@ -174,7 +224,19 @@ const styles = StyleSheet.create({
   },
   content: {
     padding: 20,
-    gap: 24,
+    gap: 22,
+  },
+  metaRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  categoryBadge: {
+    color: '#2f6f6d',
+    fontSize: 12,
+    fontWeight: '800',
+    textTransform: 'uppercase',
   },
   titleRow: {
     flexDirection: 'row',
@@ -183,21 +245,24 @@ const styles = StyleSheet.create({
   },
   productName: {
     fontSize: 24,
-    fontWeight: '700',
+    fontWeight: '800',
     flex: 1,
+    lineHeight: 31,
   },
   stockBadge: {
-    color: '#22c55e',
+    color: '#16803d',
     fontSize: 13,
-    fontWeight: '500',
-    marginTop: 4,
+    fontWeight: '800',
+  },
+  stockBadgeMuted: {
+    color: '#a23c35',
   },
   sizesSection: {
     gap: 12,
   },
   sectionLabel: {
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '800',
   },
   sizeScroll: {
     flexDirection: 'row',
@@ -207,7 +272,7 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderColor: '#dce2e8',
     marginRight: 10,
     backgroundColor: '#fff',
   },
@@ -217,7 +282,7 @@ const styles = StyleSheet.create({
   },
   sizeText: {
     fontSize: 14,
-    fontWeight: '500',
+    fontWeight: '800',
     color: '#333',
   },
   sizeTextActive: {
@@ -229,7 +294,7 @@ const styles = StyleSheet.create({
   description: {
     fontSize: 14,
     lineHeight: 22,
-    color: '#666',
+    color: '#59616b',
   },
   bottomBar: {
     position: 'absolute',
@@ -243,71 +308,43 @@ const styles = StyleSheet.create({
     paddingBottom: 34,
     backgroundColor: '#fff',
     borderTopWidth: 1,
-    borderTopColor: '#eee',
+    borderTopColor: '#e0e5eb',
   },
   bottomLeft: {
     flex: 1,
   },
+  bottomLabel: {
+    color: '#68717d',
+    fontSize: 12,
+    fontWeight: '800',
+    marginBottom: 2,
+    textTransform: 'uppercase',
+  },
   bottomPrice: {
     fontSize: 20,
-    fontWeight: '700',
+    fontWeight: '800',
   },
-  bottomActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  bookmarkBtn: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    borderWidth: 1,
-    borderColor: '#ddd',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#fff',
-  },
-  addCartBtn: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    borderWidth: 1,
-    borderColor: '#ddd',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#fff',
-    position: 'relative',
-  },
-  addCartBtnActive: {
-    backgroundColor: '#111',
-    borderColor: '#111',
-  },
-  cartQtyBadge: {
-    position: 'absolute',
-    top: -4,
-    right: -4,
-    minWidth: 16,
-    height: 16,
-    borderRadius: 8,
-    backgroundColor: '#ef4444',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 4,
-  },
-  cartQtyText: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: '#fff',
-  },
-  buyNowBtn: {
-    backgroundColor: '#000',
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 22,
-  },
-  buyNowText: {
-    color: '#fff',
+  bottomStock: {
+    color: '#16803d',
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: '800',
+  },
+  bottomStockMuted: {
+    color: '#a23c35',
+  },
+  errorText: {
+    color: '#9f2a1d',
+    lineHeight: 20,
+    textAlign: 'center',
+  },
+  retryButton: {
+    backgroundColor: '#111111',
+    borderRadius: 8,
+    paddingHorizontal: 18,
+    paddingVertical: 12,
+  },
+  retryText: {
+    color: '#ffffff',
+    fontWeight: '800',
   },
 });
