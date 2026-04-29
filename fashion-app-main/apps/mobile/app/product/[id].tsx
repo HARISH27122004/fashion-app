@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Image } from 'expo-image';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -7,56 +7,51 @@ import { useBookmarks } from '@/contexts/BookmarkContext';
 import { useCart } from '@/contexts/CartContext';
 import { ThemedText } from '@/components/themed-text';
 import { IconSymbol } from '@/components/ui/icon-symbol';
-
-const PRODUCTS = [
-  {
-    id: '1',
-    name: 'Mandt T-Shirt',
-    price: 125.0,
-    image: '/products/mandt-tshirt.png',
-    sizes: ['S', 'M', 'L', 'XL', '2XL', '3XL'],
-    description: 'Discover our latest premium graphic t-shirt, meticulously crafted with bold abstract designs that merge contemporary art and streetwear culture.',
-  },
-  {
-    id: '2',
-    name: 'Hand Sneak T-Shirt',
-    price: 118.0,
-    image: '/products/hand-sneak-tshirt.png',
-    sizes: ['S', 'M', 'L', 'XL', '2XL'],
-    description: 'A bold expression of urban artistry, the Hand Sneak T-Shirt features dynamic blue brush strokes across a premium cream canvas.',
-  },
-  {
-    id: '3',
-    name: 'Cuiar T-Shirt',
-    price: 109.0,
-    image: '/products/cuiar-tshirt.png',
-    sizes: ['S', 'M', 'L', 'XL', '2XL', '3XL'],
-    description: 'Embrace the vintage aesthetic with this olive-toned graphic tee. The Cuiar features classic collegiate-inspired typography.',
-  },
-  {
-    id: '4',
-    name: 'Leon Dose Shirt',
-    price: 188.0,
-    image: '/products/leon-dose-shirt.png',
-    sizes: ['M', 'L', 'XL', '2XL'],
-    description: 'Minimalist luxury meets understated design. The Leon Dose features a clean beige palette with a subtle back logo detail.',
-  },
-  {
-    id: '5',
-    name: 'Embroidery Gen Shirt',
-    price: 126.0,
-    image: '/products/embroidery-gen-shirt.png',
-    sizes: ['S', 'M', 'L', 'XL', '2XL', '3XL'],
-    description: 'Discover our latest premium embroidered shirt, meticulously crafted with detailed designs that merge style and tradition.',
-  },
-];
+import { supabase } from '@/lib/supabase';
+import { Product } from '@/types/product';
 
 export default function ProductDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const product = PRODUCTS.find((p) => p.id === id);
+  const [product, setProduct] = useState<Product | null>(null);
   const [selectedSize, setSelectedSize] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
   const { isBookmarked, toggleBookmark } = useBookmarks();
   const { addToCart, getQuantity } = useCart();
+
+  useEffect(() => {
+    fetchProduct();
+  }, [id]);
+
+  async function fetchProduct() {
+    const { data, error } = await supabase
+      .from('products')
+      .select('*')
+      .eq('id', id)
+      .single();
+
+    if (error) {
+      console.error('Error fetching product:', error);
+      setLoading(false);
+      return;
+    }
+
+    if (data) {
+      setProduct({
+        ...data,
+        id: String(data.id),
+        sizes: data.sizes || ['S', 'M', 'L', 'XL'],
+      } as Product);
+    }
+    setLoading(false);
+  }
+
+  if (loading) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <ThemedText>Loading...</ThemedText>
+      </SafeAreaView>
+    );
+  }
 
   if (!product) {
     return (

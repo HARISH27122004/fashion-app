@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import { FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Image } from 'expo-image';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -7,50 +8,41 @@ import { ThemedText } from '@/components/themed-text';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { useBookmarks } from '@/contexts/BookmarkContext';
 import { useCart } from '@/contexts/CartContext';
-
-const PRODUCTS = [
-  {
-    id: '1',
-    name: 'Mandt T-Shirt',
-    price: 125.0,
-    category: 't-shirt',
-    image: '/products/mandt-tshirt.png',
-  },
-  {
-    id: '2',
-    name: 'Hand Sneak T-Shirt',
-    price: 118.0,
-    category: 't-shirt',
-    image: '/products/hand-sneak-tshirt.png',
-  },
-  {
-    id: '3',
-    name: 'Cuiar T-Shirt',
-    price: 109.0,
-    category: 't-shirt',
-    image: '/products/cuiar-tshirt.png',
-  },
-  {
-    id: '4',
-    name: 'Leon Dose Shirt',
-    price: 188.0,
-    category: 'shirt',
-    image: '/products/leon-dose-shirt.png',
-  },
-  {
-    id: '5',
-    name: 'Embroidery Gen Shirt',
-    price: 126.0,
-    category: 'shirt',
-    image: '/products/embroidery-gen-shirt.png',
-  },
-];
+import { supabase } from '@/lib/supabase';
+import { Product } from '@/types/product';
 
 export default function HomeScreen() {
   const { toggleBookmark, isBookmarked } = useBookmarks();
   const { addToCart, getQuantity: getCartQuantity } = useCart();
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const renderProduct = ({ item }: { item: typeof PRODUCTS[0] }) => {
+  useEffect(() => {
+    fetchProducts();
+  }, []);
+
+  async function fetchProducts() {
+    const { data, error } = await supabase.from('products').select('*');
+
+    if (error) {
+      console.error('Error fetching products:', error);
+      setLoading(false);
+      return;
+    }
+
+    if (data) {
+      setProducts(
+        data.map((item) => ({
+          ...item,
+          id: String(item.id),
+          sizes: item.sizes || ['S', 'M', 'L', 'XL'],
+        }))
+      );
+    }
+    setLoading(false);
+  }
+
+  const renderProduct = ({ item }: { item: Product }) => {
     const quantity = getCartQuantity(item.id);
     return (
       <View style={styles.productCard}>
@@ -101,13 +93,26 @@ export default function HomeScreen() {
     );
   };
 
+  if (loading) {
+    return (
+      <SafeAreaView style={styles.container} edges={['top']}>
+        <ThemedView style={styles.header}>
+          <ThemedText type="title">Welcome</ThemedText>
+        </ThemedView>
+        <View style={{ padding: 20 }}>
+          <ThemedText>Loading products...</ThemedText>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <ThemedView style={styles.header}>
         <ThemedText type="title">Welcome</ThemedText>
       </ThemedView>
       <FlatList
-        data={PRODUCTS}
+        data={products}
         renderItem={renderProduct}
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.list}
