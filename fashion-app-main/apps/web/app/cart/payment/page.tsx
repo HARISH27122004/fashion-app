@@ -22,16 +22,35 @@ export default function PaymentPage() {
   }
 
   async function saveOrder() {
-    await supabase.from("orders").insert([
+    const {
+      data: { user }
+    } = await supabase.auth.getUser();
+
+    if (!user) {
+      alert("Please login first");
+      return;
+    }
+
+    const { error } = await supabase.from("orders").insert([
       {
+        user_id: user.id,
         customer_name: "Harish",
         phone: "9876543210",
         address: "Chennai",
         total_amount: 1572,
         payment_method: "Razorpay",
-        payment_status: "Paid"
+        payment_status: "Paid",
+        orders_status: "Pending"
       }
     ]);
+
+    if (error) {
+      console.log(error);
+      alert(error.message);
+      return;
+    }
+
+    alert("Order Saved Successfully");
   }
 
   function openPayment() {
@@ -44,7 +63,6 @@ export default function PaymentPage() {
 
       handler: async function () {
         await saveOrder();
-        alert("Payment Successful & Order Saved");
       },
 
       theme: {
