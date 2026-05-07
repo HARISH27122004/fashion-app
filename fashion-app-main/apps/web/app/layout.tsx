@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { DM_Sans } from "next/font/google";
+import { DM_Sans, Syne } from "next/font/google";
 import "./globals.css";
 import { BookmarkProvider } from "@/contexts/BookmarkContext";
 import { CartProvider } from "@/contexts/CartContext";
@@ -9,14 +9,22 @@ const dmSans = DM_Sans({
   subsets: ["latin"],
   variable: "--font-sans",
   display: "swap",
-  weight: ["300", "400", "500", "600", "700"],
+});
+
+const syne = Syne({
+  subsets: ["latin"],
+  variable: "--font-display",
+  display: "swap",
 });
 
 export const metadata: Metadata = {
-  title: "WELCOME — Discover Latest Fashion",
+  title: "Fashion Dirt — Discover Latest Fashion",
   description:
     "Shop premium streetwear and fashion essentials. Discover the latest t-shirts, shirts, pants, and jackets from WELCOME.",
   keywords: ["fashion", "streetwear", "clothing", "t-shirts", "shirts"],
+  icons: {
+    icon: "./logo.png"
+  }
 };
 
 export default function RootLayout({
@@ -25,7 +33,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`${dmSans.variable}`}>
+    <html lang="en" className={`${syne.variable}`}>
       <body>
         <BookmarkProvider>
           <CartProvider>

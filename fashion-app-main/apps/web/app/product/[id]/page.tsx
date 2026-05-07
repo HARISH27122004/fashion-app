@@ -86,9 +86,8 @@ export default function ProductDetail() {
               {product.sizes.map((size: string) => (
                 <button
                   key={size}
-                  className={`${styles.sizeBtn} ${
-                    selectedSize === size ? styles.sizeActive : ""
-                  }`}
+                  className={`${styles.sizeBtn} ${selectedSize === size ? styles.sizeActive : ""
+                    }`}
                   onClick={() => setSelectedSize(size)}
                 >
                   {size}
@@ -106,9 +105,21 @@ export default function ProductDetail() {
 
       <div className={styles.bottomBar}>
         <div className={styles.bottomActions}>
-          <button className={styles.buyNowWrap}>
-            <span className={styles.buyNowText}>Buy Now</span>
-            <span className={styles.tryNowTag}>Try now</span>
+          <button
+            className={styles.buyNowWrap}
+            onClick={() => {
+              addToCart(product.id);
+
+              window.location.href = "/cart";
+            }}
+          >
+            <span className={styles.buyNowText}>
+              Buy Now
+            </span>
+
+            <span className={styles.tryNowTag}>
+              Try now
+            </span>
           </button>
         </div>
 
@@ -130,12 +141,11 @@ export default function ProductDetail() {
             </button>
 
             <button
-              className={`${styles.bookmarkBtn} ${
-                bookmarked ? styles.bookmarked : ""
-              }`}
+              className={`${styles.bookmarkBtn} ${bookmarked ? styles.bookmarked : ""
+                }`}
               onClick={() => toggleBookmark(product.id)}
             >
-                     <svg
+              <svg
                 width="20"
                 height="20"
                 viewBox="0 0 24 24"

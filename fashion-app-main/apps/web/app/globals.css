@@ -24,7 +24,7 @@
 
   /* Typography Scale */
   --font-sans: 'DM Sans', 'Helvetica Neue', Helvetica, Arial, sans-serif;
-  --font-display: 'Playfair Display', Georgia, 'Times New Roman', serif;
+  --font-display: 'Syne', sans-serif, Georgia, 'Times New Roman', serif;
 
   /* Font weights */
   --font-light: 300;

@@ -31,7 +31,7 @@ export default function Header({
           </button>
         )}
 
-        <h1 className={styles.title}>{title || "WELCOME"}</h1>
+        <h1 className={styles.title}>{title || "STUDIO DIRT"}</h1>
 
         {showBookmark ? (
           <Link href="/bookmarks" className={styles.iconBtn} aria-label="Bookmarks" id="header-bookmark">
