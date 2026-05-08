@@ -11,7 +11,7 @@ export function AddressForm() {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleChange = useCallback((field: keyof typeof shippingAddress, value: string) => {
-    setShippingAddress(prev => ({ ...prev, [field]: value }));
+    setShippingAddress(({[field]: value }));
     // Clear error for this field when user starts typing
     setFormErrors(prev => {
       const newErrors = { ...prev };
