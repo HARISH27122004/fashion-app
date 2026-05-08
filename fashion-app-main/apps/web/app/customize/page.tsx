@@ -128,8 +128,8 @@ export default function CustomizePage() {
   const router = useRouter();
   const [view, setView] = useState<View>("front");
   const [isFlipped, setIsFlipped] = useState(false);
-  const [selectedLocation, setSelectedLocation] = useState<Location>(PRINT_LOCATIONS[0]);
-  const [garmentColor, setGarmentColor] = useState<GarmentColor>(GARMENT_COLORS[0]);
+  const [selectedLocation, setSelectedLocation] = useState<Location>(PRINT_LOCATIONS[0]!);
+  const [garmentColor, setGarmentColor] = useState<GarmentColor>(GARMENT_COLORS[0]!);
   const [artworkSrc, setArtworkSrc] = useState<string | null>(null);
   const [artworkName, setArtworkName] = useState("");
   const [artworkFileSize, setArtworkFileSize] = useState("");
