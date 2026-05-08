@@ -7,7 +7,7 @@ import Header from "@/components/Header";
 import SlideDrawer from "@/components/SlideDrawer";
 import { SearchProvider, useSearch } from "@/contexts/SearchContext";
 
-const AUTH_ROUTES = ["/login", "/signup", "/forgot-password"];
+const AUTH_ROUTES = ["/login", "/signup", "/forgot-password","/admin/login","/admin","/order-success"];
 
 function AppShellInner({ children }: { children: React.ReactNode }) {
   const [drawerOpen, setDrawerOpen] = useState(false);

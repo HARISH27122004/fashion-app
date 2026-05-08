@@ -152,6 +152,8 @@ export default function Header({
     if (pathname === "/orders") return "ORDERS";
     if (pathname === "/customize") return "CUSTOMIZE";
     if (pathname === "/product/") return "PRODUCT DETAILS";
+    if (pathname === "/cart/address") return "ADDRESS";
+    if (pathname === "/cart/payment") return "PAYMENT";
     return "PRODUCT DETAILS";
   };
 
