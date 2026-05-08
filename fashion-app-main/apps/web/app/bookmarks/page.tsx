@@ -12,12 +12,6 @@ export default function BookmarksPage() {
   const bookmarkedProducts = bookmarks
     .map((b) => getProductById(b.productId))
     .filter((p): p is NonNullable<typeof p> => p !== undefined)
-    .sort((a, b) => {
-      // Sort by most recently bookmarked
-      const aTime = bookmarks.find((bm) => bm.productId === a.id)?.timestamp || 0;
-      const bTime = bookmarks.find((bm) => bm.productId === b.id)?.timestamp || 0;
-      return bTime - aTime;
-    });
 
   return (
     <>
