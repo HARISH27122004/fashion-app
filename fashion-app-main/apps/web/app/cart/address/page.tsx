@@ -3,8 +3,6 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
-import Header from "@/components/Header";
-
 import { supabase } from "@/lib/supabase";
 
 import { useCheckout } from "@/contexts/CheckoutContext";
@@ -76,11 +74,6 @@ export default function AddressPage() {
 
   return (
     <>
-      <Header
-        showBack
-        title="Address"
-      />
-
       <main className={styles.main}>
         <section className={styles.card}>
           <h2 className={styles.heading}>

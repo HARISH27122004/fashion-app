@@ -1,6 +1,4 @@
 "use client";
-
-import Header from "@/components/Header";
 import { supabase } from "@/lib/supabase";
 
 import { useCheckout } from "@/contexts/CheckoutContext";
@@ -328,10 +326,6 @@ const fullAddress = [
 
   return (
     <>
-      <Header
-        showBack
-        title="Payment"
-      />
 
       <main
         style={{

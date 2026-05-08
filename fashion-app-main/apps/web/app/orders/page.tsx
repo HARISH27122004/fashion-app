@@ -1,6 +1,6 @@
 "use client";
 
-import Header from "@/components/Header";
+
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
@@ -106,11 +106,6 @@ export default function OrdersPage() {
 
   return (
     <>
-      <Header
-        showBack
-        title="My Orders"
-      />
-
       <main
         style={{
           padding: "24px",

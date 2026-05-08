@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Image from "next/image";
-import Header from "@/components/Header";
 import { supabase } from "@/lib/supabase";
 import { useBookmarks } from "@/contexts/BookmarkContext";
 import { useCart } from "@/contexts/CartContext";
@@ -45,7 +44,6 @@ export default function ProductDetail() {
   if (!product) {
     return (
       <>
-        <Header showBack title="Details" showBookmark />
         <div className={styles.notFound}>
           <p>Loading...</p>
         </div>
@@ -58,7 +56,6 @@ export default function ProductDetail() {
 
   return (
     <>
-      <Header showBack title="Details" showBookmark />
 
       <main className={styles.main}>
         <div className={styles.imageContainer} id="product-image">

@@ -1,22 +1,31 @@
 "use client";
 
-import Header from "@/components/Header";
 import ProductCard from "@/components/ProductCard";
 import { useBookmarks } from "@/contexts/BookmarkContext";
 import { getProductById } from "@/data/products";
+import { useSearch } from "@/contexts/SearchContext"; // ✅ added
 import styles from "./page.module.css";
 
 export default function BookmarksPage() {
   const { bookmarks } = useBookmarks();
+  const { searchQuery } = useSearch(); // ✅ added
 
   const bookmarkedProducts = bookmarks
     .map((b) => getProductById(b.productId))
     .filter((p): p is NonNullable<typeof p> => p !== undefined)
+    // ✅ search filter added
+    .filter((p) => {
+      if (!searchQuery) return true;
+      const q = searchQuery.toLowerCase();
+      return (
+        p.name?.toLowerCase().includes(q) ||
+        p.category?.toLowerCase().includes(q) ||
+        String(p.price).includes(q)
+      );
+    });
 
   return (
     <>
-      <Header showBack title="Bookmarks" showBookmark />
-
       <main className={styles.main}>
         {bookmarkedProducts.length > 0 ? (
           <section className={styles.productGrid} id="bookmarks-grid">
@@ -38,8 +47,9 @@ export default function BookmarksPage() {
             >
               <path d="M19 21l-7-5-7 5V5a2 2 0 012-2h10a2 2 0 012 2z" />
             </svg>
-            <h2>No bookmarks yet</h2>
-            <p>Items you save will appear here</p>
+            {/* ✅ search-aware empty state */}
+            <h2>{searchQuery ? `No results for "${searchQuery}"` : "No bookmarks yet"}</h2>
+            <p>{searchQuery ? "Try a different search term" : "Items you save will appear here"}</p>
           </div>
         )}
       </main>

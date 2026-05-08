@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 
 import { useParams } from "next/navigation";
 
-import Header from "@/components/Header";
 
 import { supabase } from "@/lib/supabase";
 
@@ -79,11 +78,6 @@ export default function OrderDetailsPage() {
 
   return (
     <>
-      <Header
-        showBack
-        title="Order Details"
-      />
-
       <main
         style={{
           padding: "24px",

@@ -1,10 +1,9 @@
 "use client";
-
-import Header from "@/components/Header";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useCart } from "@/contexts/CartContext";
 import { useCheckout } from "@/contexts/CheckoutContext";
+import { useSearch } from "@/contexts/SearchContext"; // ✅ added
 import { getProductById } from "@/data/products";
 import styles from "./page.module.css";
 
@@ -12,13 +11,24 @@ export default function CartPage() {
   const router = useRouter();
   const { cart, updateQuantity, removeFromCart, clearCart } = useCart();
   const { setStep } = useCheckout();
+  const { searchQuery } = useSearch(); // ✅ added
 
   const cartItems = cart
     .map((item) => {
       const product = getProductById(item.productId);
       return product ? { ...item, product } : null;
     })
-    .filter((item): item is NonNullable<typeof item> => item !== null);
+    .filter((item): item is NonNullable<typeof item> => item !== null)
+    // ✅ search filter added
+    .filter((item) => {
+      if (!searchQuery) return true;
+      const q = searchQuery.toLowerCase();
+      return (
+        item.product.name?.toLowerCase().includes(q) ||
+        item.product.category?.toLowerCase().includes(q) ||
+        String(item.product.price).includes(q)
+      );
+    });
 
   const total = cartItems.reduce(
     (sum, item) => sum + item.product.price * item.quantity,
@@ -32,8 +42,6 @@ export default function CartPage() {
 
   return (
     <>
-      <Header showBack title="Cart" />
-
       <main className={styles.main}>
         {cartItems.length > 0 ? (
           <>
@@ -42,10 +50,7 @@ export default function CartPage() {
                 {cartItems.length} item{cartItems.length !== 1 ? "s" : ""}
               </span>
 
-              <button
-                className={styles.clearBtn}
-                onClick={clearCart}
-              >
+              <button className={styles.clearBtn} onClick={clearCart}>
                 Clear all
               </button>
             </div>
@@ -65,10 +70,7 @@ export default function CartPage() {
                   </div>
 
                   <div className={styles.productDetails}>
-                    <h3 className={styles.productName}>
-                      {product.name}
-                    </h3>
-
+                    <h3 className={styles.productName}>{product.name}</h3>
                     <p className={styles.productPrice}>
                       ${product.price.toFixed(2)}
                     </p>
@@ -77,22 +79,14 @@ export default function CartPage() {
                   <div className={styles.quantityControl}>
                     <button
                       className={styles.qtyBtn}
-                      onClick={() =>
-                        updateQuantity(productId, quantity - 1)
-                      }
+                      onClick={() => updateQuantity(productId, quantity - 1)}
                     >
                       –
                     </button>
-
-                    <span className={styles.quantity}>
-                      {quantity}
-                    </span>
-
+                    <span className={styles.quantity}>{quantity}</span>
                     <button
                       className={styles.qtyBtn}
-                      onClick={() =>
-                        updateQuantity(productId, quantity + 1)
-                      }
+                      onClick={() => updateQuantity(productId, quantity + 1)}
                     >
                       +
                     </button>
@@ -128,18 +122,16 @@ export default function CartPage() {
                 <span>${total.toFixed(2)}</span>
               </div>
 
-              <button
-                className={styles.checkoutBtn}
-                onClick={handleCheckout}
-              >
+              <button className={styles.checkoutBtn} onClick={handleCheckout}>
                 Continue to Address
               </button>
             </div>
           </>
         ) : (
           <div className={styles.empty}>
-            <h2>Your cart is empty</h2>
-            <p>Looks like you haven&apos;t added anything yet</p>
+            {/* ✅ search-aware empty state */}
+            <h2>{searchQuery ? `No results for "${searchQuery}"` : "Your cart is empty"}</h2>
+            <p>{searchQuery ? "Try a different search term" : "Looks like you haven't added anything yet"}</p>
           </div>
         )}
       </main>
