@@ -1,188 +1,231 @@
+/* ─── Card ─────────────────────────────────────────────── */
 .card {
   display: flex;
   flex-direction: column;
-  gap: var(--space-md);
-  /* Removed animation to fix visibility issue on some devices */
+  animation: fadeUp 0.4s ease both;
 }
 
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ─── Image ─────────────────────────────────────────────── */
 .imageWrap {
   display: block;
   position: relative;
   width: 100%;
-  aspect-ratio: 3 / 3.5;
-  border-radius: var(--radius-lg);
+  aspect-ratio: 3 / 4;
+  border-radius: 14px;
   overflow: hidden;
-  background: var(--color-surface);
-  transition: transform 0.3s ease;
+  background: #ebe8e2;
+  flex-shrink: 0;
 }
 
-.imageWrap:hover {
-  transform: scale(1.02);
+/* Next/Image fill mode — fills the aspect-ratio box perfectly */
+.image {
+  display: block;
+  object-fit: cover;
+  transition: transform 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94);
 }
 
 .imageWrap:hover .image {
   transform: scale(1.05);
 }
 
-.image {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  mix-blend-mode: multiply;
-  transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
+/* ─── Info — fixed height, never grows ──────────────────── */
 .info {
   display: flex;
   flex-direction: column;
-  gap: var(--space-sm);
-  padding: 0 var(--space-xs);
+  height: 72px;          /* name(17px) + gap(auto) + bottomRow(32px) + pt(10px) */
+  padding-top: 10px;
+  flex-shrink: 0;
+  overflow: hidden;
 }
 
-.nameRow {
+/* Product name — 1 line, truncated */
+.name {
+  font-size: 13px;
+  font-weight: 500;
+  color: #1a1a1a;
+  text-decoration: none;
+  letter-spacing: 0.01em;
+  line-height: 1.3;
+  height: 17px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  display: block;
+  flex-shrink: 0;
+  transition: color 0.2s ease;
+}
+.name:hover { color: #555; }
+
+/* ─── Bottom row ─────────────────────────────────────────── */
+.bottomRow {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: var(--space-sm);
+  margin-top: auto;
+  height: 32px;
+  flex-shrink: 0;
+  /* No gap here — price grows, controls are fixed-width on the right */
 }
 
-.name {
-  font-family: var(--font-sans);
-  font-size: var(--text-sm);
-  font-weight: var(--font-semibold);
-  color: var(--color-text-primary);
+/* ─── Price ──────────────────────────────────────────────── */
+/* 
+ * priceWrap takes all remaining space.
+ * originalPrice is always rendered (visibility:hidden when absent)
+ * so the pill never jumps vertically.
+ */
+.priceWrap {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: flex-start;
+  flex: 1;               /* fills leftover space */
+  min-width: 0;
+  height: 44px;
+  margin-top: -12px;     /* float the tiny label above the row boundary */
+  overflow: visible;
+}
+
+.originalPrice {
+  font-size: 10px;
+  color: #aaa;
+  text-decoration: line-through;
+  line-height: 1.2;
   white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  transition: color 0.2s ease;
+  height: 12px;
+  display: block;
 }
 
-.name:hover {
-  color: var(--color-text-secondary);
+.originalPrice.noDiscount {
+  visibility: hidden;    /* space preserved, no layout shift */
 }
 
-.stock {
-  font-family: var(--font-sans);
-  font-size: var(--text-xs);
-  font-weight: var(--font-medium);
-  color: var(--color-text-tertiary);
+.pricePill {
+  display: inline-flex;
+  align-items: center;
+  height: 32px;
+  padding: 0 12px;
+  border-radius: 20px;
+  border: 1.5px solid #d8d4ce;
+  background: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  color: #1a1a1a;
+  letter-spacing: 0.01em;
   white-space: nowrap;
   flex-shrink: 0;
 }
 
-.priceRow {
+/* ─── Controls — FIXED WIDTH so qty pill never shifts layout ─ */
+.controls {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: var(--space-sm);
+  justify-content: flex-end;
+  gap: 6px;
+  flex-shrink: 0;
+  height: 32px;
+  /*
+   * Width = qtyPill-max-width + gap + bookmarkBtn
+   * qtyPill: 28+22+28 = 78px border+content + 3px borders ≈ 82px
+   * gap: 6px
+   * bookmark: 32px
+   * Total ≈ 120px — set slightly above so it never wraps
+   */
+  width: 120px;
 }
 
-.price {
-  display: inline-flex;
-  align-items: center;
-  padding: 6px 16px;
-  border-radius: var(--radius-pill);
-  border: 1.5px solid var(--color-border);
-  font-family: var(--font-sans);
-  font-size: var(--text-sm);
-  font-weight: var(--font-semibold);
-  color: var(--color-text-primary);
-}
-
-.actions {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.cartBtn {
+/* Round icon button (+ and bookmark) */
+.iconBtn {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 1.5px solid #d8d4ce;
+  background: #fff;
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 36px;
-  height: 36px;
-  border-radius: var(--radius-full);
-  border: 1.5px solid var(--color-border);
-  background: transparent;
-  color: var(--color-text-primary);
+  color: #1a1a1a;
   cursor: pointer;
-  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  flex-shrink: 0;
+  padding: 0;
+  transition: background 0.18s ease, border-color 0.18s ease,
+              color 0.18s ease, transform 0.12s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+.iconBtn:hover {
+  background: #1a1a1a;
+  border-color: #1a1a1a;
+  color: #fff;
+  transform: scale(1.08);
+}
+.iconBtn:active { transform: scale(0.93); }
+.iconBtn.bookmarked {
+  background: #1a1a1a;
+  border-color: #1a1a1a;
+  color: #fff;
 }
 
-.cartBtn:hover {
-  background: var(--color-accent);
-  color: var(--color-white);
-  border-color: var(--color-accent);
-  transform: scale(1.1);
-}
-
-.cartBtn:active {
-  transform: scale(0.95);
-}
-
-.quantityBadge {
-  font-family: var(--font-sans);
-  font-size: var(--text-sm);
-  font-weight: var(--font-bold);
-  color: var(--color-white);
-  background: var(--color-accent);
-  min-width: 20px;
-  height: 20px;
-  border-radius: 10px;
+/* Quantity pill (− N +) — fixed 32px tall */
+.qtyPill {
   display: flex;
   align-items: center;
-  justify-content: center;
-  padding: 0 6px;
+  height: 32px;
+  border-radius: 20px;
+  border: 1.5px solid #1a1a1a;
+  background: #1a1a1a;
+  overflow: hidden;
+  flex-shrink: 0;
 }
 
-.addBtn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 36px;
-  height: 36px;
-  border-radius: var(--radius-full);
-  border: 1.5px solid var(--color-border);
-  color: var(--color-text-primary);
-  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.addBtn:hover {
-  background: var(--color-black);
-  color: var(--color-white);
-  border-color: var(--color-black);
-  transform: scale(1.1);
-}
-
-.addBtn:active {
-  transform: scale(0.95);
-}
-
-.bookmarkBtn {
-  width: 36px;
-  height: 36px;
-  border-radius: var(--radius-full);
-  border: 1.5px solid var(--color-border);
+.qBtn {
+  width: 28px;
+  height: 100%;
+  flex-shrink: 0;
   background: transparent;
+  border: none;
+  color: #fff;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--color-text-tertiary);
-  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   cursor: pointer;
+  padding: 0;
+  transition: background 0.14s ease, transform 0.1s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+.qBtn:hover { background: rgba(255,255,255,0.18); }
+.qBtn:active { transform: scale(0.88); }
+
+.qNum {
+  min-width: 22px;
+  text-align: center;
+  font-size: 12px;
+  font-weight: 700;
+  color: #fff;
+  letter-spacing: 0.04em;
+  user-select: none;
+  border-left: 1px solid rgba(255,255,255,0.15);
+  border-right: 1px solid rgba(255,255,255,0.15);
+  padding: 0 3px;
+  line-height: 29px;
 }
 
-.bookmarkBtn:hover {
-  color: var(--color-red);
-  border-color: var(--color-red);
-}
-
-.bookmarkBtn.bookmarked {
-  color: var(--color-red);
-  border-color: var(--color-red);
-}
-
-.bookmarkBtn.bookmarked:hover {
-  background: var(--color-red);
-  color: var(--color-white);
+/* ─── Discount badge ─────────────────────────────────────── */
+.discountBadge {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  z-index: 3;
+  background: #ff6b35;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+  padding: 4px 8px;
+  border-radius: 999px;
+  pointer-events: none;
+  user-select: none;
 }

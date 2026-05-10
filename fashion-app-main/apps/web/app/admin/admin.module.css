@@ -1,0 +1,305 @@
+.main {
+  max-width: 620px;
+  margin: 0 auto;
+  padding: 40px 20px 100px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.card {
+  background: #fff;
+  border: 1px solid #efefef;
+  border-radius: 16px;
+  padding: 28px;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+}
+
+.cardHeader { margin-bottom: 24px; }
+
+.badge {
+  display: inline-block;
+  background: #1a1a2e;
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  padding: 3px 10px;
+  border-radius: 4px;
+  margin-bottom: 12px;
+}
+
+.title { font-size: 20px; font-weight: 700; color: #111; margin: 0 0 6px; }
+.subtitle { font-size: 13px; color: #888; margin: 0; line-height: 1.5; }
+
+/* ── Sections ── */
+.section { margin-bottom: 20px; }
+
+.label {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 10px;
+}
+
+.labelNote {
+  font-size: 11px;
+  font-weight: 400;
+  color: #aaa;
+  margin-left: 6px;
+}
+
+/* ── Product grid ── */
+.productGrid {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.productChip {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  border: 1.5px solid #e8e8e8;
+  background: #fafafa;
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.18s ease;
+  font-family: inherit;
+  position: relative;
+}
+
+.productChip:hover { border-color: #ccc; background: #f5f5f5; }
+
+.productChipActive {
+  border-color: #1a1a2e !important;
+  background: #f0f0f8 !important;
+}
+
+.productChipDiscounted {
+  border-color: #fde8dc;
+  background: #fff8f5;
+}
+
+.chipName { flex: 1; font-size: 14px; font-weight: 500; color: #111; }
+
+.chipPrice { font-size: 13px; color: #555; }
+
+.discountTag {
+  background: #ff6b35;
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 4px;
+  letter-spacing: 0.05em;
+}
+
+/* ── Discount chips ── */
+.discountGrid {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+
+.discountChip {
+  padding: 8px 18px;
+  border-radius: 20px;
+  border: 1.5px solid #e0e0e0;
+  background: #fff;
+  font-size: 14px;
+  font-weight: 600;
+  color: #333;
+  cursor: pointer;
+  transition: all 0.15s;
+  font-family: inherit;
+}
+
+.discountChip:hover { border-color: #ff6b35; color: #ff6b35; }
+
+.discountChipActive {
+  background: #ff6b35 !important;
+  border-color: #ff6b35 !important;
+  color: #fff !important;
+}
+
+/* ── Preview ── */
+.preview {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  background: #f9f9f9;
+  border-radius: 8px;
+  font-size: 14px;
+}
+
+.previewLabel { color: #888; font-size: 12px; }
+.previewOld { color: #aaa; text-decoration: line-through; }
+.previewArrow { color: #ccc; }
+.previewNew { color: #22a06b; font-weight: 700; font-size: 16px; }
+
+/* ── Textarea ── */
+.textarea {
+  width: 100%;
+  resize: vertical;
+  border: 1.5px solid #e0e0e0;
+  border-radius: 10px;
+  padding: 12px 14px;
+  font-size: 14px;
+  font-family: inherit;
+  color: #111;
+  line-height: 1.5;
+  outline: none;
+  transition: border-color 0.2s;
+  box-sizing: border-box;
+}
+
+.textarea:focus { border-color: #ff6b35; }
+.textarea::placeholder { color: #bbb; }
+
+.composerFooter { margin-top: 6px; }
+.charCount { font-size: 11px; color: #aaa; }
+
+/* ── Send button ── */
+.sendBtn {
+  width: 100%;
+  background: #1a1a2e;
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  padding: 14px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s, transform 0.1s;
+  font-family: inherit;
+  margin-top: 4px;
+}
+
+.sendBtn:hover:not(:disabled) { background: #2d2d4e; }
+.sendBtn:active:not(:disabled) { transform: scale(0.99); }
+.sendBtn:disabled { opacity: 0.45; cursor: not-allowed; }
+.sentBtn { background: #22a06b !important; opacity: 1 !important; }
+
+/* ── List header ── */
+.listHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+
+.listTitle {
+  font-size: 15px;
+  font-weight: 700;
+  color: #111;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.count {
+  background: #f0f0f0;
+  color: #555;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 20px;
+}
+
+.clearBtn {
+  font-size: 12px;
+  color: #a0834d;
+  background: transparent;
+  border: 1px solid #f0ddb0;
+  border-radius: 8px;
+  padding: 5px 12px;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.2s;
+}
+
+.clearBtn:hover { background: #fff8ec; }
+
+.empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 28px 0;
+  color: #aaa;
+  font-size: 14px;
+}
+
+.emptyIcon { font-size: 26px; }
+
+/* ── List items ── */
+.list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.item {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  background: #fafafa;
+  border: 1px solid #f0f0f0;
+  border-radius: 10px;
+}
+
+.itemContent { flex: 1; display: flex; flex-direction: column; gap: 3px; }
+.itemMessage { font-size: 13px; color: #333; margin: 0; line-height: 1.4; }
+.itemSub { font-size: 12px; color: #888; margin: 0; }
+.itemTime { font-size: 11px; color: #bbb; }
+
+.discountBadge {
+  background: #ff6b35;
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 4px;
+}
+
+.restoreBtn {
+  background: transparent;
+  border: 1px solid #e0e0e0;
+  border-radius: 6px;
+  padding: 4px 10px;
+  font-size: 12px;
+  color: #666;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.15s;
+  flex-shrink: 0;
+}
+
+.restoreBtn:hover { border-color: #c0392b; color: #c0392b; }
+.restoreBtn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.deleteBtn {
+  background: transparent;
+  border: none;
+  color: #ccc;
+  font-size: 13px;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 4px;
+  transition: color 0.15s;
+  flex-shrink: 0;
+}
+
+.deleteBtn:hover { color: #c0392b; }

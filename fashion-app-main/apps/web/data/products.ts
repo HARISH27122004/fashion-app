@@ -2,6 +2,8 @@ export interface Product {
   id: string;
   name: string;
   price: number;
+  original_price?:number | null;
+  discount_percent?:number | null;
   category: "all" | "t-shirt" | "shirt" | "pant" | "jacket";
   image: string;
   inStock: boolean;

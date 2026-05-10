@@ -21,8 +21,8 @@
 .productGrid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: var(--space-xl);
-  padding: 0 var(--space-xl);
+  gap: 12px;
+  padding: 0 16px 16px 16px;
 }
 
 .empty {
@@ -58,7 +58,8 @@
   justify-content: space-between;
   align-items: center;
   gap: 20px;
-  margin-bottom: 24px;
+  margin-bottom: 12px;
+  padding: 0 16px;
 }
 
 /* RIGHT FILTERS */
@@ -86,7 +87,7 @@
 
   .sortFilters {
     width: 100%;
-    padding: 0 20px;
+    padding: 0;
   }
 
   .select {

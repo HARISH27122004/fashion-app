@@ -1,3 +1,5 @@
+"use client";
+
 import Image from "next/image";
 import Link from "next/link";
 import { useBookmarks } from "@/contexts/BookmarkContext";
@@ -10,84 +12,117 @@ interface ProductCardProps {
   index?: number;
 }
 
-export default function ProductCard({ product }: ProductCardProps) {
+export default function ProductCard({ product, index = 0 }: ProductCardProps) {
   const { isBookmarked, toggleBookmark } = useBookmarks();
-  const { addToCart, getQuantity } = useCart();
+  // ✅ pull in decrementFromCart alongside the others
+  const { addToCart, removeFromCart, decrementFromCart, getQuantity } = useCart();
   const bookmarked = isBookmarked(product.id);
   const quantity = getQuantity(product.id);
 
+  const hasDiscount =
+    typeof product.discount_percent === "number" &&
+    product.discount_percent > 0 &&
+    product.original_price != null;
+
   return (
-    <div
+    <article
       className={styles.card}
       id={`product-card-${product.id}`}
+      style={{ animationDelay: `${index * 60}ms` }}
     >
+      {/* Image */}
       <Link href={`/product/${product.id}`} className={styles.imageWrap}>
+        {hasDiscount && (
+          <div className={styles.discountBadge}>
+            -{product.discount_percent}%
+          </div>
+        )}
         <Image
           src={product.image}
           alt={product.name}
-          width={400}
-          height={400}
+          fill
           className={styles.image}
           sizes="(max-width: 768px) 50vw, 25vw"
         />
       </Link>
 
+      {/* Info */}
       <div className={styles.info}>
-        <div className={styles.nameRow}>
-          <Link href={`/product/${product.id}`} className={styles.name}>
-            {product.name}
-          </Link>
-          <span className={styles.stock}>In Stock</span>
-        </div>
+        <Link href={`/product/${product.id}`} className={styles.name}>
+          {product.name}
+        </Link>
 
-        <div className={styles.priceRow}>
-          <span className={styles.price}>
-            ${product.price.toFixed(2)}
-          </span>
-          <div className={styles.actions}>
-            <button
-              className={`${styles.addBtn} ${styles.cartBtn}`}
-              aria-label={quantity > 0 ? `Add more ${product.name} to cart (${quantity} in cart)` : `Add ${product.name} to cart`}
-              id={`add-to-cart-${product.id}`}
-              onClick={(e) => {
-                e.preventDefault();
-                addToCart(product.id);
-              }}
+        <div className={styles.bottomRow}>
+          <div className={styles.priceWrap}>
+            <span
+              className={`${styles.originalPrice}${hasDiscount ? "" : ` ${styles.noDiscount}`}`}
             >
-              {quantity > 0 ? (
-                <span className={styles.quantityBadge}>{quantity}</span>
-              ) : (
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              {hasDiscount ? `$${product.original_price!.toFixed(2)}` : "\u00A0"}
+            </span>
+            <span className={styles.pricePill}>
+              ${product.price.toFixed(2)}
+            </span>
+          </div>
+
+          <div className={styles.controls}>
+            {quantity === 0 ? (
+              /* Add button — shown when item not in cart */
+              <button
+                className={styles.iconBtn}
+                aria-label={`Add ${product.name} to cart`}
+                onClick={() => addToCart(product.id)}
+              >
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none"
+                  stroke="currentColor" strokeWidth="2.8" strokeLinecap="round">
                   <line x1="12" y1="5" x2="12" y2="19" />
                   <line x1="5" y1="12" x2="19" y2="12" />
                 </svg>
-              )}
-            </button>
+              </button>
+            ) : (
+              /* Qty pill — shown when item is in cart */
+              <div className={styles.qtyPill}>
+                {/* ✅ FIXED: decrementFromCart instead of removeFromCart */}
+                <button
+                  className={styles.qBtn}
+                  aria-label="Remove one"
+                  onClick={() => decrementFromCart(product.id)}
+                >
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" strokeWidth="3" strokeLinecap="round">
+                    <line x1="5" y1="12" x2="19" y2="12" />
+                  </svg>
+                </button>
+                <span className={styles.qNum}>{quantity}</span>
+                <button
+                  className={styles.qBtn}
+                  aria-label="Add one more"
+                  onClick={() => addToCart(product.id)}
+                >
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" strokeWidth="3" strokeLinecap="round">
+                    <line x1="12" y1="5" x2="12" y2="19" />
+                    <line x1="5" y1="12" x2="19" y2="12" />
+                  </svg>
+                </button>
+              </div>
+            )}
+
+            {/* Bookmark */}
             <button
-              className={`${styles.bookmarkBtn} ${bookmarked ? styles.bookmarked : ""}`}
-              aria-label={bookmarked ? `Remove ${product.name} from bookmarks` : `Save ${product.name} to bookmarks`}
-              id={`bookmark-${product.id}`}
-              onClick={(e) => {
-                e.preventDefault();
-                toggleBookmark(product.id);
-              }}
+              className={`${styles.iconBtn}${bookmarked ? ` ${styles.bookmarked}` : ""}`}
+              aria-label={bookmarked ? `Unbookmark ${product.name}` : `Bookmark ${product.name}`}
+              onClick={() => toggleBookmark(product.id)}
             >
-              <svg
-                width="18"
-                height="18"
-                viewBox="0 0 24 24"
+              <svg width="13" height="13" viewBox="0 0 24 24"
                 fill={bookmarked ? "currentColor" : "none"}
-                stroke="currentColor"
-                strokeWidth="2.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
+                stroke="currentColor" strokeWidth="2.2"
+                strokeLinecap="round" strokeLinejoin="round">
                 <path d="M19 21l-7-5-7 5V5a2 2 0 012-2h10a2 2 0 012 2z" />
               </svg>
             </button>
           </div>
         </div>
       </div>
-    </div>
+    </article>
   );
 }

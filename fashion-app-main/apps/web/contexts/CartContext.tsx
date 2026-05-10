@@ -27,6 +27,11 @@ type CartContextType = {
     productId: string
   ) => Promise<void>;
 
+  // ✅ NEW: decrements by 1, removes item when qty reaches 0
+  decrementFromCart: (
+    productId: string
+  ) => Promise<void>;
+
   updateQuantity: (
     productId: string,
     quantity: number
@@ -55,44 +60,35 @@ export function CartProvider({
     useState<CartItem[]>([]);
 
   // LOAD CART
- useEffect(() => {
-  let mounted = true;
+  useEffect(() => {
+    let mounted = true;
 
-  async function init() {
-    if (!mounted) return;
+    async function init() {
+      if (!mounted) return;
+      await loadCart();
+    }
 
-    await loadCart();
-  }
+    init();
 
-  init();
-
-  const {
-    data: { subscription },
-  } =
-    supabase.auth.onAuthStateChange(
-      async (event) => {
-        // LOGOUT
-        if (
-          event === "SIGNED_OUT"
-        ) {
-          setCart([]);
+    const {
+      data: { subscription },
+    } =
+      supabase.auth.onAuthStateChange(
+        async (event) => {
+          if (event === "SIGNED_OUT") {
+            setCart([]);
+          }
+          if (event === "SIGNED_IN") {
+            await loadCart();
+          }
         }
+      );
 
-        // LOGIN
-        if (
-          event === "SIGNED_IN"
-        ) {
-          await loadCart();
-        }
-      }
-    );
-
-  return () => {
-    mounted = false;
-
-    subscription.unsubscribe();
-  };
-}, []);
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
+  }, []);
 
   // LOAD USER CART
   async function loadCart() {
@@ -119,11 +115,8 @@ export function CartProvider({
     if (data) {
       setCart(
         data.map((item) => ({
-          productId:
-            item.product_id,
-
-          quantity:
-            item.quantity,
+          productId: item.product_id,
+          quantity: item.quantity,
         }))
       );
     }
@@ -141,34 +134,21 @@ export function CartProvider({
     if (!user) return;
 
     const existing = cart.find(
-      (item) =>
-        item.productId === productId
+      (item) => item.productId === productId
     );
 
-    // UPDATE EXISTING
     if (existing) {
-      const newQuantity =
-        existing.quantity +
-        quantity;
-
-      await updateQuantity(
-        productId,
-        newQuantity
-      );
-
+      await updateQuantity(productId, existing.quantity + quantity);
       return;
     }
 
-    // INSERT NEW
     const { error } =
       await supabase
         .from("cart_items")
         .insert([
           {
             user_id: user.id,
-
             product_id: productId,
-
             quantity,
           },
         ]);
@@ -178,19 +158,23 @@ export function CartProvider({
       return;
     }
 
-    setCart((prev) => [
-      ...prev,
-      {
-        productId,
-        quantity,
-      },
-    ]);
+    setCart((prev) => [...prev, { productId, quantity }]);
   }
 
-  // REMOVE ITEM
-  async function removeFromCart(
-    productId: string
-  ) {
+  // ✅ DECREMENT BY 1 — uses updateQuantity which handles qty === 0 cleanup
+  async function decrementFromCart(productId: string) {
+    const existing = cart.find(
+      (item) => item.productId === productId
+    );
+
+    if (!existing) return;
+
+    // updateQuantity already calls removeFromCart when newQty <= 0
+    await updateQuantity(productId, existing.quantity - 1);
+  }
+
+  // REMOVE ENTIRE ITEM (full delete — used by clearCart & updateQuantity at 0)
+  async function removeFromCart(productId: string) {
     const {
       data: { user },
     } = await supabase.auth.getUser();
@@ -210,11 +194,7 @@ export function CartProvider({
     }
 
     setCart((prev) =>
-      prev.filter(
-        (item) =>
-          item.productId !==
-          productId
-      )
+      prev.filter((item) => item.productId !== productId)
     );
   }
 
@@ -229,20 +209,16 @@ export function CartProvider({
 
     if (!user) return;
 
+    // qty hit 0 → remove the row entirely
     if (quantity <= 0) {
-      await removeFromCart(
-        productId
-      );
-
+      await removeFromCart(productId);
       return;
     }
 
     const { error } =
       await supabase
         .from("cart_items")
-        .update({
-          quantity,
-        })
+        .update({ quantity })
         .eq("user_id", user.id)
         .eq("product_id", productId);
 
@@ -253,12 +229,8 @@ export function CartProvider({
 
     setCart((prev) =>
       prev.map((item) =>
-        item.productId ===
-        productId
-          ? {
-              ...item,
-              quantity,
-            }
+        item.productId === productId
+          ? { ...item, quantity }
           : item
       )
     );
@@ -287,23 +259,16 @@ export function CartProvider({
   }
 
   // GET QUANTITY
-  function getQuantity(
-    productId: string
-  ) {
+  function getQuantity(productId: string) {
     const item = cart.find(
-      (item) =>
-        item.productId === productId
+      (item) => item.productId === productId
     );
-
-    return item
-      ? item.quantity
-      : 0;
+    return item ? item.quantity : 0;
   }
 
   // TOTAL ITEMS
   const totalItems = cart.reduce(
-    (sum, item) =>
-      sum + item.quantity,
+    (sum, item) => sum + item.quantity,
     0
   );
 
@@ -311,17 +276,12 @@ export function CartProvider({
     <CartContext.Provider
       value={{
         cart,
-
         addToCart,
-
         removeFromCart,
-
+        decrementFromCart,
         updateQuantity,
-
         clearCart,
-
         getQuantity,
-
         totalItems,
       }}
     >
@@ -331,8 +291,7 @@ export function CartProvider({
 }
 
 export function useCart() {
-  const context =
-    useContext(CartContext);
+  const context = useContext(CartContext);
 
   if (!context) {
     throw new Error(

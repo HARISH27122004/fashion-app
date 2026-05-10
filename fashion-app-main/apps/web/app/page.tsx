@@ -1,31 +1,62 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import CategoryFilter from "@/components/CategoryFilter";
 import ProductCard from "@/components/ProductCard";
+import ToastNotification, { ToastItem } from "@/components/ToastNotification";
+import { useNotifications } from "@/hooks/useNotifications";
 import { categories } from "@/data/products";
 import { supabase } from "@/lib/supabase";
 import Loader from "@/components/Loader";
-import { useSearch } from "@/contexts/SearchContext"; // ✅ added
+import { useSearch } from "@/contexts/SearchContext";
 import styles from "./page.module.css";
+
+// ── Toast dismissed-IDs helpers ──────────────────────────
+const DISMISSED_KEY = "toast_dismissed_ids";
+
+function getDismissedIds(): Set<string> {
+  if (typeof window === "undefined") return new Set();
+  try {
+    const raw = localStorage.getItem(DISMISSED_KEY);
+    return new Set(raw ? JSON.parse(raw) : []);
+  } catch {
+    return new Set();
+  }
+}
+
+function markDismissed(id: string) {
+  if (typeof window === "undefined") return;
+  const ids = getDismissedIds();
+  ids.add(id);
+  localStorage.setItem(DISMISSED_KEY, JSON.stringify([...ids]));
+}
 
 export default function Home() {
   const router = useRouter();
-  const { searchQuery } = useSearch(); // ✅ added
+  const { searchQuery } = useSearch();
 
+  // ── Products / UI state ──────────────────────────────
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [products, setProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [sortBy, setSortBy] = useState("default");
   const [maxPrice, setMaxPrice] = useState(10000);
 
+  // ── Toast / notification state ───────────────────────
+  const [activeToasts, setActiveToasts] = useState<ToastItem[]>([]);
+  const hasInitialized = useRef(false);
+  const notifications = useNotifications();
+
+  // ── Auth check ───────────────────────────────────────
   useEffect(() => {
     checkUser();
   }, []);
 
   async function checkUser() {
-    const { data: { user } } = await supabase.auth.getUser();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
 
     if (!user) {
       router.push("/login");
@@ -35,6 +66,7 @@ export default function Home() {
     fetchProducts();
   }
 
+  // ── Fetch products ───────────────────────────────────
   async function fetchProducts() {
     const { data, error } = await supabase.from("products").select("*");
 
@@ -58,12 +90,46 @@ export default function Home() {
     setLoading(false);
   }
 
+  // ── Toast / notification logic ───────────────────────
+  useEffect(() => {
+    if (notifications.length === 0) return;
+
+    if (!hasInitialized.current) {
+      hasInitialized.current = true;
+
+      const dismissed = getDismissedIds();
+      const toShow = notifications.filter((n) => !dismissed.has(n.id));
+
+      if (toShow.length > 0) {
+        setActiveToasts(toShow.map((n) => ({ id: n.id, message: n.message })));
+      }
+      return;
+    }
+
+    // After init: only add brand-new notifications (not already shown or dismissed)
+    setActiveToasts((prev) => {
+      const dismissed = getDismissedIds();
+      const existingIds = new Set(prev.map((t) => t.id));
+
+      const brandNew = notifications
+        .filter((n) => !dismissed.has(n.id) && !existingIds.has(n.id))
+        .map((n) => ({ id: n.id, message: n.message }));
+
+      return brandNew.length > 0 ? [...brandNew, ...prev] : prev;
+    });
+  }, [notifications]);
+
+  function handleDismiss(id: string) {
+    markDismissed(id);
+    setActiveToasts((prev) => prev.filter((t) => t.id !== id));
+  }
+
+  // ── Filtering & sorting ──────────────────────────────
   const filteredProducts = [
     ...(selectedCategory === "all"
       ? products
       : products.filter((product) => product.category === selectedCategory)),
   ]
-    // ✅ search filter added
     .filter((product) => {
       if (!searchQuery) return true;
       const q = searchQuery.toLowerCase();
@@ -73,9 +139,7 @@ export default function Home() {
         String(product.price).includes(q)
       );
     })
-    // price filter — unchanged
     .filter((product) => Number(product.price) <= maxPrice)
-    // sorting — unchanged
     .sort((a, b) => {
       if (sortBy === "low-high") return Number(a.price) - Number(b.price);
       if (sortBy === "high-low") return Number(b.price) - Number(a.price);
@@ -90,6 +154,9 @@ export default function Home() {
   return (
     <>
       <main className={styles.main}>
+        {/* TOAST NOTIFICATIONS */}
+        <ToastNotification toasts={activeToasts} onDismiss={handleDismiss} />
+
         {/* HERO */}
         <section className={styles.hero} id="hero-section">
           <h2 className={styles.heroTitle}>
@@ -147,7 +214,7 @@ export default function Home() {
             <div className={styles.empty}>
               <p>
                 {searchQuery
-                  ? `No results for "${searchQuery}"` // ✅ search-aware empty state
+                  ? `No results for "${searchQuery}"`
                   : "No products found."}
               </p>
             </div>
