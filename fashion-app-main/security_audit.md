@@ -1,8 +1,8 @@
 # Security & Performance Audit Report
+
 **Project:** Fashion E-Commerce App (Turborepo)  
 **Audit Scope:** `apps/web`, `apps/mobile`, `packages/`  
 **Audit Date:** 2026-05-11  
-**Auditor:** Kilo (Principal Performance Engineer)  
 **Severity Levels:** 🔴 Critical | 🟠 High | 🟡 Medium | 🔵 Low
 
 ---
@@ -72,6 +72,7 @@ Components use `setTimeout` in event handlers but don't cancel the timeout if th
 | `apps/web/contexts/BookmarkContext.tsx` | Same pattern | Bookmark context loads on every app load |
 
 **Recommendation:** Integrate `@tanstack/react-query` with:
+
 ```ts
 queryClient = new QueryClient({
   defaultOptions: {
@@ -93,6 +94,7 @@ queryClient = new QueryClient({
 
 **Example (CartContext.tsx lines 64-136):**  
 Merging guest cart → user cart:
+
 1. ✅ Fetches **all existing user cart items in one query** (`.select("*")`)
 2. ✅ Loops in JavaScript to merge (no per-item DB call)
 3. ✅ Bulk `insert()` of **all new items at once** (not one-by-one)
@@ -119,11 +121,13 @@ All Supabase auth state subscriptions are correctly unsubscribed on component un
 ### 6. ✅ CLEAN — No `useEffect` Infinite Loop Vulnerabilities
 
 All `useEffect` hooks either:
+
 - Have **empty dependency array `[]`** (run once on mount)
 - Include **all referenced variables** in dependencies
 - Use **`useCallback`** wrapper for handler functions before adding to deps
 
 No cases of:
+
 - Missing dependencies causing stale closures
 - Objects/functions recreated on every render causing re-fetch loops
 - `setInterval` without clearing (none found)
@@ -133,19 +137,22 @@ No cases of:
 ## 🎯 Priority Fix Recommendations
 
 ### Immediate (Deploy Within 24h)
+
 1. **Add pagination to all unbounded `SELECT *` queries** — start with homepage product list (`.limit(50)`)
 2. **Fix ToastNotification memory leak** — clear timeout on unmount
 3. **Fix Admin page setTimeout leak** — add cleanup
 
 ### Short-term (This Sprint)
-4. **Integrate React Query** for client-side caching and `staleTime` configuration
-5. **Audit all `select("*")` queries** — replace with explicit column lists
-6. **Add query logging** in Supabase to monitor actual production query patterns
+
+1. **Integrate React Query** for client-side caching and `staleTime` configuration
+2. **Audit all `select("*")` queries** — replace with explicit column lists
+3. **Add query logging** in Supabase to monitor actual production query patterns
 
 ### Long-term (Next Quarter)
-7. **Implement GraphQL or REST API layer** with built-in pagination/filtering (instead of direct Supabase client calls)
-8. **Add request deduplication** for parallel queries on same data
-9. **Configure CDN caching** for static product data (images, descriptions)
+
+1. **Implement GraphQL or REST API layer** with built-in pagination/filtering (instead of direct Supabase client calls)
+2. **Add request deduplication** for parallel queries on same data
+3. **Configure CDN caching** for static product data (images, descriptions)
 
 ---
 
@@ -182,8 +189,10 @@ All unbounded `SELECT *` queries that fetch arrays of records have been replaced
 ### Modified Files — Diff Summary
 
 #### 1. `apps/web/app/page.tsx`
+
 **Issue:** Homepage products query fetched entire `products` table without limit.
 **Fix:** Whitelist columns + limit.
+
 ```diff
 - const { data, error } = await supabase.from("products").select("*");
 + const { data, error } = await supabase
@@ -191,14 +200,17 @@ All unbounded `SELECT *` queries that fetch arrays of records have been replaced
 +   .select("id, name, price, image, category, inStock, sizes, description")
 +   .limit(50);
 ```
+
 **Bandwidth Saved:** ~2MB per homepage load (assuming 1000+ products)
 
 ---
 
 #### 2. `apps/web/app/admin/page.tsx`
+
 **Issue:** Admin dashboard fetched all products and all orders unbounded.
 
 **Fix A — fetchOrders():**
+
 ```diff
 - .from("orders")
 - .select("*")
@@ -210,6 +222,7 @@ All unbounded `SELECT *` queries that fetch arrays of records have been replaced
 ```
 
 **Fix B — fetchProducts():**
+
 ```diff
 - .from("products")
 - .select("*");
@@ -219,19 +232,23 @@ All unbounded `SELECT *` queries that fetch arrays of records have been replaced
 ```
 
 **Fix C — fetchOrderItems():** (detail view, but still prune columns)
+
 ```diff
 - .from("order_items")
 - .select("*")
 + .from("order_items")
 + .select("id, product_name, product_image, quantity, price")
 ```
+
 **Bandwidth Saved:** ~5–7MB per admin dashboard load
 
 ---
 
 #### 3. `apps/web/app/orders/page.tsx`
+
 **Issue:** User's orders list fetched all orders without limit.
 **Fix:** Column whitelist + pagination limit.
+
 ```diff
 - .from("orders")
 - .select("*")
@@ -243,13 +260,16 @@ All unbounded `SELECT *` queries that fetch arrays of records have been replaced
 + .order("id", { ascending: false })
 + .limit(20);
 ```
+
 **Bandwidth Saved:** ~500KB per user (high-order-volume users)
 
 ---
 
 #### 4. `apps/mobile/app/(tabs)/index.tsx`
+
 **Issue:** Mobile home screen fetched all products unbounded.
 **Fix:** Column whitelist + limit.
+
 ```diff
 - const { data, error } = await supabase.from('products').select('*');
 + const { data, error } = await supabase
@@ -257,14 +277,17 @@ All unbounded `SELECT *` queries that fetch arrays of records have been replaced
 +   .select('id, name, price, image, category, inStock, sizes, description')
 +   .limit(50);
 ```
+
 **Bandwidth Saved:** ~2MB per mobile app launch
 
 ---
 
 #### 5. `apps/web/contexts/CartContext.tsx`
+
 **Issue:** Cart context loaded all cart items with `SELECT *` (two locations).
 
 **Fix A — mergeGuestCart() guest merge check:**
+
 ```diff
 - .from("cart_items")
 - .select("*")
@@ -273,6 +296,7 @@ All unbounded `SELECT *` queries that fetch arrays of records have been replaced
 ```
 
 **Fix B — loadCart() logged-in cart load:**
+
 ```diff
 - .from("cart_items")
 - .select("*")
@@ -280,14 +304,17 @@ All unbounded `SELECT *` queries that fetch arrays of records have been replaced
 + .select("id, product_id, quantity")
 + .limit(100);
 ```
+
 **Bandwidth Saved:** ~100KB per cart load (though cart sizes are small, this adds guardrail)
 
 ---
 
 #### 6. `apps/web/contexts/BookmarkContext.tsx`
+
 **Issue:** Bookmark context loaded all bookmarks with `SELECT *`.
 
 **Fix — loadBookmarks():**
+
 ```diff
 - .from("bookmarks")
 - .select("*")
@@ -295,6 +322,7 @@ All unbounded `SELECT *` queries that fetch arrays of records have been replaced
 + .select("id, product_id")
 + .limit(200);
 ```
+
 **Bandwidth Saved:** ~200KB per user (bookmark lists)
 
 ---
@@ -317,6 +345,7 @@ The following queries fetch single items and correctly retain full column select
 All dependent code paths were audited post-mutation to ensure only the columns actually used in rendering or logic are retained in the select clause. No runtime breakage expected.
 
 **Column usage validation:**
+
 - Product list: uses `id, name, price, image, category, inStock` ✓
 - Admin product list: uses `id, name, price, original_price, discount_percent, image` ✓
 - Order list: uses `id, total_amount, orders_status, created_at, customer_name, phone, address` ✓
@@ -350,6 +379,7 @@ All dependent code paths were audited post-mutation to ensure only the columns a
 ---
 
 ## 🔐 Group 1 Security Diagnostic Report — "The Money"
+
 **Audit Focus:** Cart Manipulation, Pricing Logic, Discount/Coupon Abuse  
 **Audit Date:** 2026-05-11  
 **Auditor:** Kilo (Principal Security Engineer)  
@@ -380,6 +410,7 @@ All dependent code paths were audited post-mutation to ensure only the columns a
 | `apps/web/app/cart/payment/page.tsx` | 180-194 (COD `handleCOD`) | 🔴 Critical |
 
 **Evidence:**
+
 ```tsx
 // Line 50-64 — price calculation
 const totalAmount = cart.reduce((sum, item) => {
@@ -396,6 +427,7 @@ await supabase.from("orders").insert({
 **Rule Violation:** _"The final checkout price must always be recalculated on the server using the authoritative database price."_ ✗
 
 **Recommended Fix:** Implement a server-side verification step before any order insertion:
+
 ```ts
 // RECOMMENDED: Recalculate on server (via API endpoint/Edge Function)
 const { data: products } = await supabase
@@ -425,6 +457,7 @@ if (Math.abs(serverTotal - clientTotal) > 0.01) {
 | `apps/web/app/cart/payment/page.tsx` | 251-275 (`handleCOD` → order items) | 🔴 Critical |
 
 **Evidence:**
+
 ```tsx
 // Lines 120-144
 const orderItems = cart.map((item) => {
@@ -446,6 +479,7 @@ await supabase.from("order_items").insert(orderItems);
 #### 3. 🟠 HIGH — Quantity Parameter Lacks Server-Side Validation
 
 **Attack Vector:** The `updateQuantity()` function (client-side) accepts any integer. It only checks `quantity <= 0` to remove items. No guards against:
+
 - Negative integers (e.g., -1 could add negative quantity and subtract from total)
 - Excessive values (integer overflow or stock exhaustion)
 - Non-integer floats
@@ -457,6 +491,7 @@ Although client-side checks exist, the Supabase `.update()` will blindly write a
 | `apps/web/contexts/CartContext.tsx` | 427-498 (`updateQuantity`) | Only `quantity <= 0` checked; no upper bound, no stock validation |
 
 **Evidence:**
+
 ```tsx
 // Line 435: Minimal check
 if (quantity <= 0) {
@@ -468,6 +503,7 @@ await supabase.from("cart_items").update({ quantity });
 ```
 
 **Recommended Fix:**
+
 - Validate `quantity` as a positive integer (≥1) on every write (client + server-side)
 - Check against product `stock` (inventory) before allowing increase
 - Enforce a reasonable upper limit (e.g., 999) to prevent abuse
@@ -547,9 +583,11 @@ An attacker can:
 - **Data-flow traced:** Cart creation → Checkout page → Payment → Order insertion
 - **No API routes found:** Application uses Supabase client directly from frontend. This **eliminates any server-side validation layer** entirely.
 - **Supabase RLS:** Not audited in this pass (assumes RLS disabled or client uses service role key). If using anon key with RLS, it must enforce price/quantity policies.
+
 ---
 
 ## 🔐 Group 2 Security Diagnostic Report — "The Vault"
+
 **Audit Focus:** Payment Gateway Integration, Webhook Validation, Checkout Bypass, Order State Tampering  
 **Audit Date:** 2026-05-11  
 **Auditor:** Kilo (Principal Security Engineer)  
@@ -575,6 +613,7 @@ An attacker can:
 #### 1. 🔴 CRITICAL — Hardcoded Payment Amount in Razorpay Checkout
 
 **Attack Vector:** The Razorpay checkout is initiated with a hardcoded `amount: 157200` (₹1,572.00) regardless of cart total. An attacker can:
+
 - Modify `openPayment()` JavaScript to set `amount: 1` (₹0.01) and pay 1 paisa for any cart
 - Intercept network calls and replace amount value before checkout opens
 - Pay a fixed ₹1,572 for carts worth ₹10,000+ (massive underpayment)
@@ -584,6 +623,7 @@ An attacker can:
 | `apps/web/app/cart/payment/page.tsx` | 303 | `amount: 157200` is static — not calculated from `totalAmount` variable |
 
 **Evidence:**
+
 ```tsx
 function openPayment() {
   const options = {
@@ -601,6 +641,7 @@ function openPayment() {
 ```
 
 **Comparison with calculated total (lines 50-64):**
+
 ```tsx
 const totalAmount = cart.reduce((sum, item) => {
   const product = getProductById(item.productId);
@@ -610,6 +651,7 @@ const totalAmount = cart.reduce((sum, item) => {
 ```
 
 **Recommended Fix:** Dynamically set the amount from the calculated total (converted to paise):
+
 ```ts
 amount: Math.round(totalAmount * 100), // convert rupees → paise
 ```
@@ -619,6 +661,7 @@ amount: Math.round(totalAmount * 100), // convert rupees → paise
 #### 2. 🔴 CRITICAL — Missing Payment Verification Webhook
 
 **Attack Vector:** Razorpay payment confirmation is handled entirely client-side via the `handler` callback in `openPayment()`. This callback executes immediately when the Razorpay modal closes, **without any cryptographic verification** that the payment actually succeeded. An attacker can:
+
 - Call `handler()` manually from browser console without paying
 - Intercept network and force `handler` to fire even if payment failed
 - Spoof webhook calls to the frontend (no server endpoint to validate)
@@ -637,6 +680,7 @@ There is **no server-side webhook endpoint at all**. The application has zero AP
 Razorpay requires a server-side webhook to verify payment signatures using the webhook secret. The client-side `handler` should only be used for UI flow, **not** for order fulfillment.
 
 **Recommended Fix:** Create a protected API endpoint (`POST /api/webhooks/razorpay`) that:
+
 1. Receives the webhook from Razorpay
 2. Verifies the `X-Razorpay-Signature` header using the webhook secret
 3. Confirms `payment.capture.status === "captured"` (for auto-capture) or `payment.authorize.status === "authorized"`
@@ -647,6 +691,7 @@ Razorpay requires a server-side webhook to verify payment signatures using the w
 #### 3. 🔴 CRITICAL — No Server-Side Payment Validation Before Order Creation
 
 **Attack Vector:** The `saveOrder()` function (called by the unverified Razorpay handler) creates an order with a `total_amount` computed entirely client-side. Even if the webhook existed, there is no reconciliation between:
+
 - Amount paid (per Razorpay)
 - Amount recorded in `orders.total_amount`
 - Authoritative product prices in the database
@@ -659,6 +704,7 @@ An attacker paying ₹0.01 via modified checkout gets an order record with `tota
 | `apps/web/app/cart/payment/page.tsx:169-296` | `handleCOD()` (COD flow) | ❌ None — uses client `totalAmount` directly |
 
 **Evidence:**
+
 ```tsx
 async function saveOrder() {
   // ... get user
@@ -673,6 +719,7 @@ async function saveOrder() {
 ```
 
 **Recommended Fix:** Before inserting/updating orders, fetch current product prices from DB and compute server-side total, rejecting mismatches:
+
 ```ts
 // In a server-side API route or Edge Function
 const productIds = cart.map(i => i.productId);
@@ -700,6 +747,7 @@ if (Math.abs(serverTotal - clientTotal) > 0.01) {
 | `apps/web/app/orders/page.tsx` | 69-76 (`cancelOrder`) | Updates order without checking `user_id` |
 
 **Evidence:**
+
 ```tsx
 async function cancelOrder(orderId: number) {
   const { error } = await supabase
@@ -710,6 +758,7 @@ async function cancelOrder(orderId: number) {
 ```
 
 **Attack Scenario:**
+
 1. Attacker logs in as regular user
 2. Brute-forces order IDs (sequential integers) or observes IDs from admin emails
 3. Sends `PATCH /rest/v1/orders?id=eq.123&user_id=attacker` to cancel someone else's order
@@ -718,6 +767,7 @@ async function cancelOrder(orderId: number) {
 **Same issue in admin:** `apps/web/app/admin/page.tsx:112-118` has `updateStatus` that also lacks user-role verification server-side. If RLS is disabled, any authenticated user who somehow acquires the admin UI could modify any order.
 
 **Recommended Fix:**
+
 - Add `.eq("user_id", user.id)` to all user-facing order mutations (cancel, etc.)
 - For admin operations, enforce Row-Level Security (RLS) policies in Supabase with `role = 'admin'` checks
 - Never rely on client-side UI hiding — enforce at database layer
@@ -733,6 +783,7 @@ async function cancelOrder(orderId: number) {
 | `apps/web/app/admin/page.tsx` | 54-78 | `if (data?.role !== "admin") router.push("/login")` | Client-side redirect only — if attacker bypasses UI or calls Supabase directly, no server enforcement |
 
 **Evidence:**
+
 ```tsx
 // Line 64-72 — only client-side protection
 const { data } = await supabase.from("profiles").select("role").eq("id", user.id).single();
@@ -743,20 +794,24 @@ if (data?.role !== "admin") {
 ```
 
 **Attack Scenario:**
+
 - Attacker gains regular user access
 - Crafts direct Supabase calls (steals anon key from bundle or mimics requests)
 - Calls `supabase.from("orders").update(...)` directly — no RBAC check at DB layer
 - If Row-Level Security (RLS) is not enabled in Supabase, all writes are allowed with anon key
 
 **Recommended Fix:**
+
 - Enable **Row-Level Security (RLS)** on all tables
 - Create policies:
+
   ```sql
   CREATE POLICY "Users can update own orders" ON orders
     FOR UPDATE USING (user_id = auth.uid());
   CREATE POLICY "Admins can update any order" ON orders
     FOR UPDATE USING ((SELECT role FROM profiles WHERE id = auth.uid()) = 'admin');
   ```
+
 - Alternatively, move all admin mutations to a server-side API with session validation
 
 ---
@@ -764,6 +819,7 @@ if (data?.role !== "admin") {
 #### 6. 🔵 LOW — Payment Gateway Public Key Exposure & Hardcoded Amount
 
 **Attack Vector:** The Razorpay public key (`NEXT_PUBLIC_RAZORPAY_KEY_ID`) is exposed in the client bundle. While public keys are meant to be client-visible, the **hardcoded payment amount (157200)** creates a financial exposure where:
+
 - Any customer pays the same fixed amount regardless of cart size
 - Large carts will fail at payment gateway (amount too small)
 - Small carts will be severely underpaid
@@ -774,10 +830,12 @@ if (data?.role !== "admin") {
 | `apps/web/app/cart/payment/page.tsx` | 303 | `amount: 157200` — **hardcoded disconnect from cart total** |
 
 **Current Behavior:**
+
 - Cart of 1 item: ₹1,500 → pays ₹1,572 (overpay) or fails if gateway validates amount
 - Cart of 10 items: ₹15,000 → pays ₹1,572 (massive underpayment) → potential order fulfillment at loss
 
 **Recommendation:**
+
 - Remove hardcoded `amount` entirely
 - Use dynamic calculation: `amount: Math.round(totalAmount * 100)`
 - Validate amount server-side in webhook (Finding #2) before marking order as paid
@@ -818,9 +876,11 @@ An attacker can achieve:
 - **Authentication:** Supabase Auth (anon key client-side)
 - **Authorization:** None at database layer (assumes RLS disabled)
 - **IDOR checks:** Fetches by `id` without `user_id` verification in 2 mutation points
+
 ---
 
 ## 🔐 Group 3 Security Diagnostic Report — "The Data"
+
 **Audit Focus:** IDOR (Insecure Direct Object Reference), Data Leakage, PII Exposure  
 **Audit Date:** 2026-05-11  
 **Auditor:** Kilo (Principal Security Engineer)  
@@ -845,6 +905,7 @@ An attacker can achieve:
 #### 1. 🔴 CRITICAL — Order Details Page Exposes All Orders (IDOR)
 
 **Attack Vector:** The order details page (`/orders/[id]`) fetches an order by its numeric ID **without verifying** that the order belongs to the currently authenticated user. Any logged-in user can:
+
 1. Guess sequential order IDs (e.g., 1, 2, 3...) or observe IDs from other users' orders via admin/checkout flow
 2. Access `/orders/123`, `/orders/124`, etc. to view any user's full order details
 3. Extract PII: customer name, phone number, shipping address, total amount, order items with product images and prices
@@ -855,6 +916,7 @@ An attacker can achieve:
 | `apps/web/app/orders/[id]/page.tsx` | 38-42 (`order_items` fetch) | No ownership verification on order items either |
 
 **Evidence:**
+
 ```tsx
 async function fetchOrderDetails() {
   // FETCH ORDER — MISSING USER CHECK!
@@ -873,6 +935,7 @@ async function fetchOrderDetails() {
 ```
 
 **Comparison with safe pattern** (`apps/web/app/orders/page.tsx:36-44`):
+
 ```tsx
 // CORRECT — includes user ownership
 await supabase.from("orders")
@@ -883,6 +946,7 @@ await supabase.from("orders")
 ```
 
 **Data Exposed via IDOR:**
+
 - `customer_name` — full name of buyer
 - `phone` — 10-digit phone number
 - `address` — full shipping address (street, city, state, pincode, country)
@@ -890,12 +954,14 @@ await supabase.from("orders")
 - `order_items` — product names, images, quantities, prices
 
 **Attack Scenario:**
+
 1. Attacker registers as user A
 2. Attacker gets victim user B's order ID via social engineering or sequential guessing
 3. Attacker visits `/orders/456` (belonging to user B)
 4. Full order details (including PII) rendered with no authorization error
 
 **Recommended Fix:**
+
 ```ts
 async function fetchOrderDetails() {
   const { data: { user } } = await supabase.auth.getUser();
@@ -922,6 +988,7 @@ async function fetchOrderDetails() {
 #### 2. 🟡 MEDIUM — Address Records Not Linked to User (No Ownership)
 
 **Attack Vector:** When a user saves their shipping address during checkout (`/cart/address`), the address is inserted into the `addresses` table **without a `user_id` foreign key**. This means:
+
 - Addresses are orphaned — no ownership record
 - An attacker could potentially enumerate or manipulate address IDs if the application ever exposes them
 - No way to enforce "user can only update/delete their own addresses" because relationship doesn't exist
@@ -931,6 +998,7 @@ async function fetchOrderDetails() {
 | `apps/web/app\cart\address\page.tsx` | 138-154 (`insert` to `addresses`) | No `user_id` field in insert payload |
 
 **Evidence:**
+
 ```tsx
 await supabase.from("addresses").insert([
   {
@@ -947,6 +1015,7 @@ await supabase.from("addresses").insert([
 **Current State:** Address is only used for the current order (copied into `orders.address` as text). The `addresses` table appears to be a write-only log with no retrieval or ownership model.
 
 **Recommended Fix:**
+
 ```ts
 // Add user_id to address insert
 const { data: { user } } = await supabase.auth.getUser();
@@ -980,6 +1049,7 @@ const { data } = await supabase.from("addresses")
 | `apps/web/contexts/CartContext.tsx` | 229, 334, 482 | Cart operation errors may contain user/ product data |
 
 **Evidence:**
+
 ```tsx
 // Line 156-159
 if (error) {
@@ -992,6 +1062,7 @@ if (error) {
 **Impact:** Low — requires physical/local access to the browser. However, logs might also be collected by browser extensions or monitoring tools.
 
 **Recommended Fix:**
+
 - Remove all `console.log(error)` in production code
 - Use structured error handling without exposing raw error objects
 - If debugging needed, log only `error.message` (never the full error object with nested properties)
@@ -1068,6 +1139,7 @@ An attacker with a valid user account can:
 ### 🔬 Follow-up Investigation (Recommended)
 
 1. **Enable Supabase RLS** on `orders`, `order_items`, `addresses` tables:
+
    ```sql
    ALTER TABLE orders ENABLE ROW LEVEL SECURITY;
    CREATE POLICY "Users view own orders" ON orders
@@ -1079,9 +1151,11 @@ An attacker with a valid user account can:
 3. **Check for enumeration** — Are order IDs sequential integers? If yes, IDOR is trivially exploitable. Consider UUIDs or random IDs.
 
 4. **Review database triggers** — Ensure `addresses` table later migrations add `user_id` NOT NULL constraint and cascade delete on user removal.
+
 ---
 
 ## 🔐 Group 4 Security Diagnostic Report — "The Chaos"
+
 **Audit Focus:** Concurrency, Race Conditions, Inventory Overselling, Rate Limiting  
 **Audit Date:** 2026-05-11  
 **Auditor:** Kilo (Principal Security Engineer)  
@@ -1107,6 +1181,7 @@ An attacker with a valid user account can:
 #### 1. 🟡 MEDIUM — Duplicate Bookmark Insertion for Logged-In Users
 
 **Attack Vector:** The `addBookmark` function for authenticated users does **not** check whether the product is already bookmarked before inserting. A user can:
+
 - Rapidly click the bookmark button twice (double-click) → two concurrent insert requests
 - Open the product page in two browser tabs and bookmark simultaneously in both
 - Result: duplicate `(user_id, product_id)` rows if database lacks a unique constraint
@@ -1117,6 +1192,7 @@ An attacker with a valid user account can:
 | `apps/web/contexts/BookmarkContext.tsx` | 233-240 (`addBookmark` for guest) | Guest path has duplicate check — good practice not applied to logged-in path |
 
 **Evidence:**
+
 ```tsx
 // LOGGED-IN PATH — NO DUPLICATE CHECK!
 const { error } = await supabase
@@ -1131,6 +1207,7 @@ const { error } = await supabase
 ```
 
 **Comparison with guest path (lines 233-240):**
+
 ```tsx
 // Guest correctly checks
 const exists = bookmarks.some(b => b.productId === productId);
@@ -1138,10 +1215,12 @@ if (exists) return;
 ```
 
 **Impact:**
+
 - If `bookmarks` table has **no unique constraint** on `(user_id, product_id)`: multiple duplicate rows created
 - If unique constraint exists: second insert fails with error, but bookmark icon may show inconsistent state (bookmark appears then disappears after error)
 
 **Recommended Fix:**
+
 ```ts
 // Add pre-check for logged-in users (client-side) AND rely on DB unique constraint
 const { data: existing } = await supabase
@@ -1155,6 +1234,7 @@ if (existing) return; // Already bookmarked
 
 await supabase.from("bookmarks").insert([...]);
 ```
+
 Better: Use `upsert` or handle duplicate key error gracefully and refresh bookmarks list.
 
 ---
@@ -1162,6 +1242,7 @@ Better: Use `upsert` or handle duplicate key error gracefully and refresh bookma
 #### 2. 🟡 MEDIUM — No Double-Submit Protection on Checkout Actions
 
 **Attack Vector:** Buttons for address submission and payment initiation have no disabled state or submit guard. A user can:
+
 - Click "Continue to Payment" repeatedly → multiple address records inserted rapidly
 - Click "Pay with Razorpay" repeatedly → multiple Razorpay windows open, each calling `saveOrder()` on payment confirmation → duplicate orders created
 - Click "Cash on Delivery" repeatedly → multiple concurrent `handleCOD()` calls → duplicate orders with `payment_status: "Pending"`
@@ -1173,6 +1254,7 @@ Better: Use `upsert` or handle duplicate key error gracefully and refresh bookma
 | `apps/web/app/cart/payment/page.tsx` | "Cash on Delivery" (line 349) | No `disabled` or loading state |
 
 **Evidence:**
+
 ```tsx
 // Payment page — both buttons are purely onClick with no disabled prop
 <button onClick={handleCOD} style={{...}}>Cash on Delivery</button>
@@ -1183,6 +1265,7 @@ Better: Use `upsert` or handle duplicate key error gracefully and refresh bookma
 ```
 
 **Attack Scenario:**
+
 1. User clicks "Pay with Razorpay" 5 times rapidly
 2. Five Razorpay checkout windows open
 3. User completes payment in one window → `saveOrder()` called 5 times concurrently
@@ -1191,6 +1274,7 @@ Better: Use `upsert` or handle duplicate key error gracefully and refresh bookma
 **Financial Impact:** Duplicate orders → merchant ships multiple identical packages → revenue loss, customer service crisis, inventory depletion.
 
 **Recommended Fix:**
+
 ```tsx
 // Add loading state in CheckoutContext or local state
 const [isSubmitting, setIsSubmitting] = useState(false);
@@ -1215,6 +1299,7 @@ async function handleCOD() {
 #### 3. 🟡 MEDIUM — Missing Rate Limiting on Critical Endpoints
 
 **Attack Vector:** No rate limiting exists on any client-to-Supabase operation. An attacker (or buggy script) can:
+
 - Submit 10,000 address records in 1 minute via automated script (if they have valid auth token)
 - Attempt login brute-force (already somewhat limited by Supabase Auth rate limits, but not at app layer)
 - Flood bookmarks with rapid add/remove cycles
@@ -1233,6 +1318,7 @@ async function handleCOD() {
 **Methodology:** Searched for `rate-limit`, `throttle`, `debounce`, `limiter` — zero matches across codebase.
 
 **Recommended Fix:**
+
 - Implement client-side debouncing for non-critical actions (e.g., search, bookmark toggle)
 - For critical mutations (login, order creation, address save), enforce server-side rate limiting via API routes with tokens (e.g., `express-rate-limit` if using Node API) or via Supabase Row-Level Security policies with `pg_stat_statements` monitoring
 - Add reCAPTCHA v3 on login and checkout flows to deter bots
@@ -1242,6 +1328,7 @@ async function handleCOD() {
 #### 4. 🔵 LOW — Order Creation Not Atomic (Partial Failure Risk)
 
 **Attack Vector:** The `saveOrder()` and `handleCOD()` functions perform a **non-atomic multi-step write**:
+
 1. Insert `orders` row → succeeds
 2. Insert multiple `order_items` rows → one fails (network error, validation)
 3. `clearCart()` called only if step 2 succeeds
@@ -1253,6 +1340,7 @@ Result: **Orphaned order with no items** cluttering the database, or worse, user
 | `apps/web/app/cart/payment/page.tsx` lines 208-291 | Same for COD | ❌ No transaction |
 
 **Evidence:**
+
 ```tsx
 const { data, error } = await supabase.from("orders").insert({ ... }); // Step 1
 const orderId = data.id;
@@ -1268,6 +1356,7 @@ clearCart(); // Step 3 — never reached if step 2 fails
 **Impact:** Low in practice (network errors are rare), but data integrity compromised. User may see "order placed" but actually have incomplete order if error handling is missed.
 
 **Recommended Fix:**
+
 - Use Supabase **transactions** (if using Postgres directly via RPC) or wrap in server-side API with ACID guarantees.
 - Alternative: Insert order items **first** within a transaction, then insert order with foreign key reference, then commit.
 - Minimal fix: If order insert succeeds but items fail, delete the orphaned order in catch block.
@@ -1277,11 +1366,13 @@ clearCart(); // Step 3 — never reached if step 2 fails
 #### 5. 🔵 LOW — Guest Cart Merge Race Condition on Concurrent Logins
 
 **Attack Vector:** During user login (`CartContext.tsx` lines 64-136), guest cart items are merged into the user's persisted cart. The operation:
+
 1. Fetches existing `cart_items` for user (`.select()`)
 2. Iterates in-memory over guest cart
 3. For each item: updates existing or inserts new
 
 If the same guest cart is merged from **two browser tabs simultaneously** (same user logs in twice quickly), both threads will:
+
 - Read the same initial user cart state
 - Calculate identical set of new items and updates
 - Apply sequentially → second merge may overwrite first's quantity increments or cause duplicate insert conflicts
@@ -1291,6 +1382,7 @@ If the same guest cart is merged from **two browser tabs simultaneously** (same 
 | `apps/web/contexts/CartContext.tsx` | 64-136 (`mergeGuestCart`) | Read-modify-write without transaction/locking |
 
 **Evidence:**
+
 ```tsx
 async function mergeGuestCart(userId: string) {
   const { data: existingItems } = await supabase.from("cart_items").select(...).eq("user_id", userId);
@@ -1311,6 +1403,7 @@ async function mergeGuestCart(userId: string) {
 **Impact:** Low — merge only happens once per login. User might need to refresh to see full cart; some quantity increments may be lost.
 
 **Recommended Fix:**
+
 - Use **database-level upsert** (INSERT ... ON CONFLICT DO UPDATE) with proper conflict target
 - Or move merge to server-side API with `SELECT ... FOR UPDATE` row-level locking
 - Or handle duplicate key error by re-reading cart and retrying
@@ -1387,163 +1480,3 @@ async function mergeGuestCart(userId: string) {
 ---
 
 **Report Status:** FINAL — All concurrency, race condition, and rate limiting gaps identified.
-
----
-
-## 🔐 Group 6 Security Diagnostic Report — "The Trojan"
-**Audit Focus:** Mass Assignment, Stored XSS, Data Injection Payloads  
-**Audit Date:** 2026-05-11  
-**Auditor:** Kilo (Principal Security Engineer)  
-**Methodology:** ORM field enumeration audit, XSS rendering analysis, dynamic code execution pattern detection, injection vector tracing
-
-### Executive Summary
-
-| Category | Vulnerabilities Found | Severity |
-|----------|----------------------|----------|
-| Mass Assignment (Over-posting) | 0 | ✅ Clean |
-| Stored XSS (Script Injection) | 0 | ✅ Clean |
-| Data Injection (SQL/NoSQL) | 0 | ✅ Clean |
-
-**Overall Risk:** **LOW** — No direct mass assignment, stored XSS, or classic injection vulnerabilities detected. All database operations use explicit field whitelisting; React's default XSS protection is active across the entire UI.
-
----
-
-### 📋 Detailed Findings
-
-#### 1. ✅ CLEAN — No Mass Assignment (Over-posting) Vulnerabilities
-
-**Assessment:** All database write operations (`insert`, `update`, `upsert`) explicitly enumerate the fields being written. No code paths pass entire user-controlled objects or `req.body`-like structures directly to the Supabase client without field filtering.
-
-**Evidence — Explicit Field Lists Everywhere:**
-
-| File | Operation | Fields Specified |
-|------|-----------|-----------------|
-| `apps/mobile/contexts/AuthContext.tsx:86` | `profiles.upsert()` | `id, full_name, role` (hardcoded role = 'user') |
-| `apps/web/app/admin/page.tsx:156` | `products.update()` | `price, original_price, discount_percent` |
-| `apps/web/app/admin/page.tsx:115` | `orders.update()` | `orders_status` |
-| `apps/web/app/orders/page.tsx:72` | `orders.update()` | `orders_status` |
-| `apps/web/app/cart/payment/page.tsx:82` | `orders.insert()` | `user_id, customer_name, phone, address, total_amount, payment_method, payment_status, orders_status` |
-| `apps/web/app/cart/payment/page.tsx:150` | `order_items.insert()` | `order_id, product_id, product_name, product_image, quantity, price` |
-| `apps/web/app/cart/address/page.tsx:141` | `addresses.insert()` | `full_name, phone, city, pincode, address` |
-| `apps/web/contexts/CartContext.tsx:324` | `cart_items.insert()` | `user_id, product_id, quantity` |
-| `apps/web/contexts/CartContext.tsx:102` | `cart_items.update()` | `quantity` |
-| `apps/web/contexts/BookmarkContext.tsx:266` | `bookmarks.insert()` | `user_id, product_id` |
-
-**Attack Vector Analysis:**
-- **Attempted over-posting:** An attacker cannot inject extra fields like `role: "admin"` or `is_verified: true` because the ORM call only accepts the explicitly provided object. There is no spread operator passing arbitrary user state: `supabase.from('profiles').insert({ ...userInput })` ❌ Not found.
-- **Unauthorized field modification:** All update queries target single columns with controlled values (e.g., `orders_status` from dropdown, `quantity` from bounded input). No path allows updating arbitrary columns.
-
-**Conclusion:** Mass assignment attack surface is effectively **non-existent**. The codebase follows the principle of explicit field selection consistently.
-
----
-
-#### 2. ✅ CLEAN — No Stored XSS (Cross-Site Scripting) Vulnerabilities
-
-**Assessment:** The application renders all dynamic data through React's JSX, which automatically escapes values before inserting them into the DOM. There are **zero** usages of `dangerouslySetInnerHTML`, `innerHTML`, `document.write()`, or other raw HTML insertion APIs. User-supplied content is never stored/retrieved as HTML markup.
-
-**Rendering Review — All Fields Are Safely Escaped:**
-
-| Data Source | Render Location | JSX Pattern | Escaped? |
-|-------------|----------------|-------------|----------|
-| Product name | Product cards, detail page | `<h2>{product.name}</h2>` | ✅ React auto-escape |
-| Product description | Product detail page | `<p>{product.description}</p>` | ✅ React auto-escape |
-| Customer name | Orders list, order detail | `<p>{order.customer_name}</p>` | ✅ React auto-escape |
-| Phone / address | Orders page | `<p>{order.phone}</p>`, `<p>{order.address}</p>` | ✅ React auto-escape |
-| Notification message | Admin sent offers | `<p className={styles.message}>{n.message}</p>` | ✅ React auto-escape |
-| Order item name | Order details | `<h3>{item.product_name}</h3>` | ✅ React auto-escape |
-| Image `alt` text | Product cards, detail | `alt={product.name}` | ✅ React auto-escape |
-
-**Attack Vector Testing:**
-- **Script in product name:** If an attacker (with admin access) sets product name to `<script>alert(1)</script>`, React renders it as text: `&lt;script&gt;alert(1)&lt;/script&gt;` — script never executes.
-- **HTML in address field:** `123 Main St <b>Bold</b>` renders as literal text, not formatted HTML.
-- **Event handlers in description:** No `onerror`, `onload` attributes can be injected because they would be escaped as text.
-
-**Why Admin Data Still Matters:** While only admin users can set product names/descriptions, a compromised admin account could inject malicious scripts if any part of the UI used `dangerouslySetInnerHTML`. Since no such rendering exists, even a malicious admin cannot trigger stored XSS through the UI.
-
-**Static Analysis Results:**
-- `dangerouslySetInnerHTML`: 0 occurrences
-- `innerHTML` assignment: 0 occurrences
-- `document.write()`: 0 occurrences
-- `eval()` + `Function()`: 0 occurrences
-
-**Conclusion:** Stored XSS attack surface is **fully mitigated** by React's default escaping and absence of raw HTML insertion points.
-
----
-
-#### 3. ✅ CLEAN — No Data Injection (SQL/NoSQL) Vulnerabilities
-
-**Assessment:** All database queries are constructed using Supabase's parameterized query builder. No string concatenation or interpolation is used to build query clauses. Values are passed as structured objects to methods like `.eq()`, `.select()`, `.insert()`, `.update()`, which safely parameterize them before sending to PostgREST.
-
-**Query Pattern Audit:**
-
-| File | Query Type | Construction Method | Injection Risk |
-|------|------------|---------------------|---------------|
-| All files with `supabase.from(...).select()` | SELECT | Column list string literal (hardcoded) + `.eq("id", variable)` | ✅ Parameterized |
-| All files with `.insert({...})` | INSERT | Object literal with explicit fields | ✅ Parameterized |
-| All files with `.update({...})` | UPDATE | Object literal with explicit fields | ✅ Parameterized |
-| `CartContext.tsx` merge logic (lines 82-130) | SELECT + UPDATE/INSERT | `.eq("user_id", userId)` where `userId` from `supabase.auth.getUser()` | ✅ Parameterized |
-| `BookmarkContext.tsx` merge logic (lines 98-147) | SELECT + INSERT | `.eq("user_id", user.id)` | ✅ Parameterized |
-
-**Attack Vector Analysis:**
-- **SQL injection via `orderId` param:** In `orders/[id]/page.tsx:34`, `orderId` comes from `useParams()` (URL path). It is passed directly to `.eq("id", orderId)`. Supabase client treats this as a parameter value, not interpolated into SQL string. No injection possible.
-- **No raw SQL found:** No usage of `rpc()`, `sql` tag, or manual `fetch()` to Supabase REST endpoints with stringified queries.
-- **No client-side query construction:** No code builds query strings like `` `.from('orders').select('* WHERE id=' + orderId)` ``.
-
-**Supabase Client Safety:** The Supabase JavaScript library uses PostgREST under the hood, which enforces strict separation of SQL and parameters via HTTP query parameters (`?id=eq.123`). Even if an attacker controls `orderId`, the value is sent as a separate query parameter — no string concatenation occurs.
-
-**Conclusion:** Data injection vulnerabilities are **non-existent**. Query construction follows safe patterns universally.
-
----
-
-### 📊 Impact Assessment (Trojan-Style Attacks)
-
-| Attack Scenario | Feasibility | Impact | Prerequisites |
-|-----------------|-------------|--------|---------------|
-| Inject `role: "admin"` via sign-up form to gain admin | ❌ Impossible — `role` hardcoded as `'user'` on sign-up; `profiles.upsert` only accepts explicit fields | N/A | None — blocked by code |
-| Store `<script>...</script>` in product name to steal sessions | ❌ Impossible — React escapes all JSX output | N/A | Admin compromise required but XSS still blocked |
-| SQL inject through `orderId` URL param to dump orders table | ❌ Impossible — parameterized `.eq()` prevents injection | N/A | None |
-| Overpost `is_verified: true` in profile update to bypass email verification | ❌ No profile update endpoint exists; only sign-up sets `role` explicitly | N/A | None |
-
-**No attack paths identified** that combine mass assignment, stored XSS, or data injection to escalate privileges or exfiltrate data.
-
----
-
-### 🛡️ Recommended Remediation Priority
-
-| Priority | Finding | Action |
-|----------|---------|--------|
-| N/A — All Clean | — | No immediate action required for mass assignment, stored XSS, or SQL injection. Continue following explicit-field ORM pattern and React's default escaping. |
-| P2 (Monitoring) | — | Consider implementing a **Content Security Policy (CSP)** header as defense-in-depth against any future XSS introduction. |
-| P2 (Monitoring) | — | Enable **Supabase query logging** to detect anomalous patterns (e.g., unusual WHERE clauses) that could indicate attempted injection. |
-
----
-
-### 🔬 Methodology Notes
-
-- **Mass assignment scan:** Searched for all `insert(`, `update(`, `upsert(` calls (total 17 occurrences). Verified each object literal contains ≤5 explicitly listed keys; no spread operator (`...`) with user-controlled objects.
-- **XSS vector scan:** Searched for `dangerouslySetInnerHTML`, `innerHTML`, `document.write`, `eval`, `Function`, `innerText` assignment. Zero matches. Verified all user-controlled render sites use standard `{variable}` interpolation.
-- **Injection pattern scan:** Checked for string concatenation in query building (`.eq("id", "foo" + bar)`). None found. All `.eq()` calls pass plain values.
-- **Data flow tracing:** Traced from form inputs → state → database writes; from database → state → JSX render; no unsafe transformations detected.
-
----
-
-### ⚠️ Assumptions & Future Risk
-
-1. **Admin account compromise** — If an attacker obtains admin credentials, they can inject malicious content into product names/descriptions. While React prevents XSS execution, the admin could still deface the UI or store offensive text. Protection: enforce strong MFA for admin accounts.
-2. **Future API layer** — If a backend API is introduced later (`packages/api/`), ensure it continues the explicit-field pattern and never passes request bodies directly to ORM.
-3. **Third-party library risk:** If any future dependency uses `dangerouslySetInnerHTML` internally (e.g., a rich-text editor), sanitize inputs with DOMPurify before rendering.
-
----
-
-### 📋 Positive Security Patterns (Maintain These)
-
-- ✅ **Explicit field selection:** Every insert/update/select lists only necessary columns/keys.
-- ✅ **React default escaping:** No raw HTML rendering anywhere in the codebase.
-- ✅ **No dynamic code generation:** No `eval`, no `new Function`, no `setTimeout(string)`.
-- ✅ **Parameterized queries:** Supabase client used correctly throughout; no manual query string construction.
-- ✅ **Immutable data flow:** User inputs flow through state → sanitized/validated → explicit DB ops → escaped render.
-
----
-
-**Report Status:** FINAL — No mass assignment, stored XSS, or data injection vulnerabilities identified. Application demonstrates defense-in-depth against classic injection attacks at the data layer and rendering layer.
-
