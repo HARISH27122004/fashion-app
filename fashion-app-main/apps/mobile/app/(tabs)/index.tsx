@@ -38,7 +38,10 @@ export default function HomeScreen() {
   const fetchProducts = useCallback(async () => {
     setErrorMessage(null);
 
-    const { data, error } = await supabase.from('products').select('*');
+    const { data, error } = await supabase
+      .from('products')
+      .select('id, name, price, image, category, inStock, sizes, description')
+      .limit(50);
 
     if (error) {
       setErrorMessage(error.message);

@@ -69,9 +69,12 @@ export default function Home() {
   },[]);
 
 
-  // ── Fetch products ───────────────────────────────────
-  async function fetchProducts() {
-    const { data, error } = await supabase.from("products").select("*");
+   // ── Fetch products ───────────────────────────────────
+   async function fetchProducts() {
+     const { data, error } = await supabase
+       .from("products")
+       .select("id, name, price, image, category, inStock, sizes, description")
+       .limit(50);
 
     if (error) {
       console.log(error);

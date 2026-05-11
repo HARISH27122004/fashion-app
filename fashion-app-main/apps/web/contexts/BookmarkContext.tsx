@@ -194,12 +194,13 @@ export function BookmarkProvider({
       return;
     }
 
-    // ── LOGGED USER ──────────────────
-    const { data, error } =
-      await supabase
-        .from("bookmarks")
-        .select("*")
-        .eq("user_id", user.id);
+     // ── LOGGED USER ──────────────────
+     const { data, error } =
+       await supabase
+         .from("bookmarks")
+         .select("id, product_id")
+         .eq("user_id", user.id)
+         .limit(200);
 
     if (error) {
       console.log(error);
