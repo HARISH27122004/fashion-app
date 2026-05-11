@@ -1,12 +1,11 @@
-// components/SlideDrawer.tsx
 "use client";
 
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { useCart } from "@/contexts/CartContext";
 import { useNotifications } from "@/hooks/useNotifications";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import styles from "./SlideDrawer.module.css";
 
 const navItems = [
@@ -81,107 +80,301 @@ interface SlideDrawerProps {
   onClose: () => void;
 }
 
-export default function SlideDrawer({ isOpen, onClose }: SlideDrawerProps) {
+export default function SlideDrawer({
+  isOpen,
+  onClose,
+}: SlideDrawerProps) {
   const pathname = usePathname();
-  const router = useRouter();
-  const { totalItems } = useCart();
-  const notifications = useNotifications();
 
+  const { totalItems } =
+    useCart();
+
+  const notifications =
+    useNotifications();
+
+  // ✅ USER STATE
+  const [user, setUser] =
+    useState<any>(null);
+
+  // BODY SCROLL
   useEffect(() => {
-    document.body.style.overflow = isOpen ? "hidden" : "";
-    return () => { document.body.style.overflow = ""; };
+    document.body.style.overflow =
+      isOpen ? "hidden" : "";
+
+    return () => {
+      document.body.style.overflow =
+        "";
+    };
   }, [isOpen]);
 
+  // ESC CLOSE
   useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
+    const handler = (
+      e: KeyboardEvent
+    ) => {
+      if (e.key === "Escape")
+        onClose();
     };
-    document.addEventListener("keydown", handler);
-    return () => document.removeEventListener("keydown", handler);
+
+    document.addEventListener(
+      "keydown",
+      handler
+    );
+
+    return () =>
+      document.removeEventListener(
+        "keydown",
+        handler
+      );
   }, [onClose]);
 
+  // ✅ AUTH CHECK
+  useEffect(() => {
+    async function getUser() {
+      const {
+        data: { user },
+      } =
+        await supabase.auth.getUser();
+
+      setUser(user);
+    }
+
+    getUser();
+
+    const {
+      data: { subscription },
+    } =
+      supabase.auth.onAuthStateChange(
+        (_event, session) => {
+          setUser(
+            session?.user || null
+          );
+        }
+      );
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, []);
+
+  // LOGOUT
   async function handleLogout() {
     onClose();
+
     await supabase.auth.signOut();
-    router.push("/login");
+
+    window.location.href = "/";
   }
 
   return (
     <>
       <div
-        className={`${styles.backdrop} ${isOpen ? styles.backdropOpen : ""}`}
+        className={`${styles.backdrop} ${
+          isOpen
+            ? styles.backdropOpen
+            : ""
+        }`}
         onClick={onClose}
         aria-hidden="true"
       />
 
       <div
-        className={`${styles.drawer} ${isOpen ? styles.drawerOpen : ""}`}
+        className={`${styles.drawer} ${
+          isOpen
+            ? styles.drawerOpen
+            : ""
+        }`}
         role="dialog"
         aria-modal="true"
         aria-label="Navigation menu"
-        id="slide-drawer"
       >
-        <div className={styles.drawerHeader}>
-          <p className={styles.brand}>STUDIO DIRT</p>
-          <p className={styles.tagline}>Curated collection</p>
+        <div
+          className={
+            styles.drawerHeader
+          }
+        >
+          <p className={styles.brand}>
+            STUDIO DIRT
+          </p>
+
+          <p
+            className={
+              styles.tagline
+            }
+          >
+            Curated collection
+          </p>
         </div>
 
-        <nav className={styles.nav} aria-label="Site navigation">
-          {navItems.map((item, i) => {
-            const isActive =
-              item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
+        <nav
+          className={styles.nav}
+          aria-label="Site navigation"
+        >
+          {navItems.map(
+            (item, i) => {
+              const isActive =
+                item.href === "/"
+                  ? pathname ===
+                    "/"
+                  : pathname.startsWith(
+                      item.href
+                    );
 
-            const cartCount = item.showCartBadge ? totalItems : 0;
-            const notifCount = item.showNotifBadge ? notifications.length : 0;
-            const badgeCount = cartCount + notifCount;
+              const cartCount =
+                item.showCartBadge
+                  ? totalItems
+                  : 0;
 
-            return (
-              <Link
-                key={item.label}
-                href={item.href}
-                onClick={onClose}
-                className={`${styles.item} ${isActive ? styles.active : ""}`}
-                aria-current={isActive ? "page" : undefined}
-                style={{ animationDelay: isOpen ? `${i * 45}ms` : "0ms" }}
-              >
-                <span className={styles.iconWrap}>{item.icon}</span>
-                <span className={styles.label}>{item.label}</span>
-                {badgeCount > 0 && (
-                  <span className={styles.badge} aria-label={`${badgeCount} items`}>
-                    {badgeCount > 99 ? "99+" : badgeCount}
+              const notifCount =
+                item.showNotifBadge
+                  ? notifications.length
+                  : 0;
+
+              const badgeCount =
+                cartCount +
+                notifCount;
+
+              return (
+                <Link
+                  key={
+                    item.label
+                  }
+                  href={
+                    item.href
+                  }
+                  onClick={
+                    onClose
+                  }
+                  className={`${styles.item} ${
+                    isActive
+                      ? styles.active
+                      : ""
+                  }`}
+                  aria-current={
+                    isActive
+                      ? "page"
+                      : undefined
+                  }
+                  style={{
+                    animationDelay:
+                      isOpen
+                        ? `${i * 45}ms`
+                        : "0ms",
+                  }}
+                >
+                  <span
+                    className={
+                      styles.iconWrap
+                    }
+                  >
+                    {item.icon}
                   </span>
-                )}
-              </Link>
-            );
-          })}
+
+                  <span
+                    className={
+                      styles.label
+                    }
+                  >
+                    {item.label}
+                  </span>
+
+                  {badgeCount >
+                    0 && (
+                    <span
+                      className={
+                        styles.badge
+                      }
+                    >
+                      {badgeCount >
+                      99
+                        ? "99+"
+                        : badgeCount}
+                    </span>
+                  )}
+                </Link>
+              );
+            }
+          )}
         </nav>
 
-        <div className={styles.drawerFooter}>
-          <button
-            className={styles.logoutBtn}
-            onClick={handleLogout}
-            aria-label="Log out"
+        {/* ✅ LOGOUT ONLY FOR LOGGED USERS */}
+        {user && (
+          <div
+            className={
+              styles.drawerFooter
+            }
           >
-            <span className={styles.iconWrap}>
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4" />
-                <polyline points="16 17 21 12 16 7" />
-                <line x1="21" y1="12" x2="9" y2="12" />
-              </svg>
-            </span>
-            <span className={styles.label}>Log Out</span>
-          </button>
-        </div>
+            <button
+              className={
+                styles.logoutBtn
+              }
+              onClick={
+                handleLogout
+              }
+              aria-label="Log out"
+            >
+              <span
+                className={
+                  styles.iconWrap
+                }
+              >
+                <svg
+                  width="20"
+                  height="20"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.7"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4" />
+                  <polyline points="16 17 21 12 16 7" />
+                  <line x1="21" y1="12" x2="9" y2="12" />
+                </svg>
+              </span>
+
+              <span
+                className={
+                  styles.label
+                }
+              >
+                Log Out
+              </span>
+            </button>
+          </div>
+        )}
 
         <button
-          className={styles.closeBtn}
+          className={
+            styles.closeBtn
+          }
           onClick={onClose}
           aria-label="Close menu"
-          id="drawer-close"
         >
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <line x1="18" y1="6" x2="6" y2="18" />
-            <line x1="6" y1="6" x2="18" y2="18" />
+          <svg
+            width="18"
+            height="18"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <line
+              x1="18"
+              y1="6"
+              x2="6"
+              y2="18"
+            />
+
+            <line
+              x1="6"
+              y1="6"
+              x2="18"
+              y2="18"
+            />
           </svg>
         </button>
       </div>

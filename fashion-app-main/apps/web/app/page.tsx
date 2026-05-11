@@ -49,22 +49,25 @@ export default function Home() {
   const notifications = useNotifications();
 
   // ── Auth check ───────────────────────────────────────
-  useEffect(() => {
-    checkUser();
-  }, []);
+  // useEffect(() => {
+  //   checkUser();
+  // }, []);
 
-  async function checkUser() {
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
+  // async function checkUser() {
+  //   const {
+  //     data: { user },
+  //   } = await supabase.auth.getUser();
 
-    if (!user) {
-      router.push("/login");
-      return;
-    }
+  //   if (!user) {
+  //     router.push("/login");
+  //     return;
+  //   }
+  // }
 
+  useEffect(()=>{
     fetchProducts();
-  }
+  },[]);
+
 
   // ── Fetch products ───────────────────────────────────
   async function fetchProducts() {

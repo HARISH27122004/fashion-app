@@ -6,8 +6,18 @@ import { useRouter } from "next/navigation";
 
 import { supabase } from "@/lib/supabase";
 
+import Loader from "@/components/Loader";
+
 export default function LoginPage() {
   const router = useRouter();
+
+// REDIRECT URL
+const redirect =
+  typeof window !== "undefined"
+    ? new URLSearchParams(
+        window.location.search
+      ).get("redirect") || "/"
+    : "/";
 
   const [isSignup, setIsSignup] =
     useState(false);
@@ -21,6 +31,10 @@ export default function LoginPage() {
   const [password, setPassword] =
     useState("");
 
+  // LOADING
+  const [loading, setLoading] =
+    useState(false);
+
   // ERRORS
   const [nameError, setNameError] =
     useState("");
@@ -33,15 +47,20 @@ export default function LoginPage() {
     setPasswordError,
   ] = useState("");
 
+  // ───────────────────────────────────
+  // AUTH
+  // ───────────────────────────────────
   async function handleAuth() {
     // RESET ERRORS
     setNameError("");
+
     setEmailError("");
+
     setPasswordError("");
 
     let hasError = false;
 
-    // FULL NAME VALIDATION
+    // FULL NAME
     if (
       isSignup &&
       !fullName.trim()
@@ -53,7 +72,7 @@ export default function LoginPage() {
       hasError = true;
     }
 
-    // EMAIL VALIDATION
+    // EMAIL
     if (!email.trim()) {
       setEmailError(
         "Please fill out this field"
@@ -62,7 +81,7 @@ export default function LoginPage() {
       hasError = true;
     }
 
-    // PASSWORD VALIDATION
+    // PASSWORD
     if (!password.trim()) {
       setPasswordError(
         "Please fill out this field"
@@ -71,10 +90,15 @@ export default function LoginPage() {
       hasError = true;
     }
 
-    // STOP AUTH
+    // STOP
     if (hasError) return;
 
+    // START LOADING
+    setLoading(true);
+
+    // ─────────────────────────────────
     // SIGNUP
+    // ─────────────────────────────────
     if (isSignup) {
       const {
         data,
@@ -88,6 +112,8 @@ export default function LoginPage() {
         );
 
       if (error) {
+        setLoading(false);
+
         alert(error.message);
 
         return;
@@ -109,14 +135,19 @@ export default function LoginPage() {
           ]);
       }
 
+      setLoading(false);
+
       alert(
         "Signup successful"
       );
 
-      router.push("/");
+      // REDIRECT
+      router.push(redirect);
     }
 
+    // ─────────────────────────────────
     // LOGIN
+    // ─────────────────────────────────
     else {
       const { error } =
         await supabase.auth.signInWithPassword(
@@ -127,13 +158,25 @@ export default function LoginPage() {
         );
 
       if (error) {
+        setLoading(false);
+
         alert(error.message);
 
         return;
       }
 
-      router.push("/");
+      setLoading(false);
+
+      // REDIRECT
+      router.push(redirect);
     }
+  }
+
+  // ───────────────────────────────────
+  // FULL PAGE LOADER
+  // ───────────────────────────────────
+  if (loading) {
+    return <Loader />;
   }
 
   return (
@@ -355,6 +398,7 @@ export default function LoginPage() {
         {/* AUTH BUTTON */}
         <button
           onClick={handleAuth}
+          disabled={loading}
           style={{
             width: "100%",
 
@@ -375,6 +419,9 @@ export default function LoginPage() {
             fontWeight: 600,
 
             fontSize: "15px",
+
+            opacity:
+              loading ? 0.7 : 1,
           }}
         >
           {isSignup

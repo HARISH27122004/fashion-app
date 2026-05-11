@@ -4,6 +4,7 @@ import { useState, useCallback } from 'react';
 import { useCheckout } from '@/contexts/CheckoutContext';
 import Link from 'next/link';
 import styles from './AddressForm.module.css';
+import Loader from './Loader';
 
 export function AddressForm() {
   const { shippingAddress, setShippingAddress, setStep } = useCheckout();
@@ -84,7 +85,9 @@ export function AddressForm() {
       setIsSubmitting(false);
     }
   }, [validateForm, isSubmitting, setStep]);
-
+if (isSubmitting) {
+  return <Loader />;
+}
   return (
     <form onSubmit={handleSubmit} className={styles.form}>
       <h1 className={styles.title}>Shipping Address</h1>

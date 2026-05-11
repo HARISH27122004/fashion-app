@@ -27,7 +27,6 @@ type CartContextType = {
     productId: string
   ) => Promise<void>;
 
-  // ✅ NEW: decrements by 1, removes item when qty reaches 0
   decrementFromCart: (
     productId: string
   ) => Promise<void>;
@@ -59,12 +58,92 @@ export function CartProvider({
   const [cart, setCart] =
     useState<CartItem[]>([]);
 
+  // ───────────────────────────────────
+  // MERGE GUEST CART → USER CART
+  // ───────────────────────────────────
+  async function mergeGuestCart(
+    userId: string
+  ) {
+    const guestCart =
+      localStorage.getItem(
+        "guest-cart"
+      );
+
+    if (!guestCart) return;
+
+    const parsedCart: CartItem[] =
+      JSON.parse(guestCart);
+
+    if (
+      parsedCart.length === 0
+    )
+      return;
+
+    // FETCH EXISTING USER CART
+    const {
+      data: existingItems,
+    } = await supabase
+      .from("cart_items")
+      .select("*")
+      .eq("user_id", userId);
+
+    for (const guestItem of parsedCart) {
+      const existing =
+        existingItems?.find(
+          (item) =>
+            item.product_id ===
+            guestItem.productId
+        );
+
+      // UPDATE EXISTING
+      if (existing) {
+        await supabase
+          .from("cart_items")
+          .update({
+            quantity:
+              existing.quantity +
+              guestItem.quantity,
+          })
+          .eq(
+            "id",
+            existing.id
+          );
+      }
+
+      // INSERT NEW
+      else {
+        await supabase
+          .from("cart_items")
+          .insert([
+            {
+              user_id:
+                userId,
+
+              product_id:
+                guestItem.productId,
+
+              quantity:
+                guestItem.quantity,
+            },
+          ]);
+      }
+    }
+
+    // CLEAR GUEST CART
+    localStorage.removeItem(
+      "guest-cart"
+    );
+  }
+
+  // ───────────────────────────────────
   // LOAD CART
+  // ───────────────────────────────────
   useEffect(() => {
     let mounted = true;
 
     async function init() {
       if (!mounted) return;
+
       await loadCart();
     }
 
@@ -75,10 +154,29 @@ export function CartProvider({
     } =
       supabase.auth.onAuthStateChange(
         async (event) => {
-          if (event === "SIGNED_OUT") {
-            setCart([]);
+          // SIGNED OUT
+          if (
+            event === "SIGNED_OUT"
+          ) {
+            await loadCart();
           }
-          if (event === "SIGNED_IN") {
+
+          // SIGNED IN
+          if (
+            event === "SIGNED_IN"
+          ) {
+            const {
+              data: { user },
+            } =
+              await supabase.auth.getUser();
+
+            if (user) {
+              // MERGE GUEST CART
+              await mergeGuestCart(
+                user.id
+              );
+            }
+
             await loadCart();
           }
         }
@@ -86,21 +184,40 @@ export function CartProvider({
 
     return () => {
       mounted = false;
+
       subscription.unsubscribe();
     };
   }, []);
 
-  // LOAD USER CART
+  // ───────────────────────────────────
+  // LOAD CART
+  // ───────────────────────────────────
   async function loadCart() {
     const {
       data: { user },
     } = await supabase.auth.getUser();
 
+    // GUEST USER
     if (!user) {
-      setCart([]);
+      const guestCart =
+        localStorage.getItem(
+          "guest-cart"
+        );
+
+      if (guestCart) {
+        setCart(
+          JSON.parse(
+            guestCart
+          )
+        );
+      } else {
+        setCart([]);
+      }
+
       return;
     }
 
+    // LOGGED USER
     const { data, error } =
       await supabase
         .from("cart_items")
@@ -109,20 +226,26 @@ export function CartProvider({
 
     if (error) {
       console.log(error);
+
       return;
     }
 
     if (data) {
       setCart(
         data.map((item) => ({
-          productId: item.product_id,
-          quantity: item.quantity,
+          productId:
+            item.product_id,
+
+          quantity:
+            item.quantity,
         }))
       );
     }
   }
 
+  // ───────────────────────────────────
   // ADD TO CART
+  // ───────────────────────────────────
   async function addToCart(
     productId: string,
     quantity: number = 1
@@ -131,14 +254,66 @@ export function CartProvider({
       data: { user },
     } = await supabase.auth.getUser();
 
-    if (!user) return;
+    // GUEST USER
+    if (!user) {
+      const existing = cart.find(
+        (item) =>
+          item.productId ===
+          productId
+      );
 
+      let updatedCart:
+        CartItem[];
+
+      if (existing) {
+        updatedCart = cart.map(
+          (item) =>
+            item.productId ===
+            productId
+              ? {
+                  ...item,
+                  quantity:
+                    item.quantity +
+                    quantity,
+                }
+              : item
+        );
+      } else {
+        updatedCart = [
+          ...cart,
+          {
+            productId,
+            quantity,
+          },
+        ];
+      }
+
+      setCart(updatedCart);
+
+      localStorage.setItem(
+        "guest-cart",
+        JSON.stringify(
+          updatedCart
+        )
+      );
+
+      return;
+    }
+
+    // LOGGED USER
     const existing = cart.find(
-      (item) => item.productId === productId
+      (item) =>
+        item.productId ===
+        productId
     );
 
     if (existing) {
-      await updateQuantity(productId, existing.quantity + quantity);
+      await updateQuantity(
+        productId,
+        existing.quantity +
+          quantity
+      );
+
       return;
     }
 
@@ -148,7 +323,8 @@ export function CartProvider({
         .insert([
           {
             user_id: user.id,
-            product_id: productId,
+            product_id:
+              productId,
             quantity,
           },
         ]);
@@ -158,47 +334,95 @@ export function CartProvider({
       return;
     }
 
-    setCart((prev) => [...prev, { productId, quantity }]);
+    setCart((prev) => [
+      ...prev,
+      {
+        productId,
+        quantity,
+      },
+    ]);
   }
 
-  // ✅ DECREMENT BY 1 — uses updateQuantity which handles qty === 0 cleanup
-  async function decrementFromCart(productId: string) {
+  // ───────────────────────────────────
+  // DECREMENT
+  // ───────────────────────────────────
+  async function decrementFromCart(
+    productId: string
+  ) {
     const existing = cart.find(
-      (item) => item.productId === productId
+      (item) =>
+        item.productId ===
+        productId
     );
 
     if (!existing) return;
 
-    // updateQuantity already calls removeFromCart when newQty <= 0
-    await updateQuantity(productId, existing.quantity - 1);
+    await updateQuantity(
+      productId,
+      existing.quantity - 1
+    );
   }
 
-  // REMOVE ENTIRE ITEM (full delete — used by clearCart & updateQuantity at 0)
-  async function removeFromCart(productId: string) {
+  // ───────────────────────────────────
+  // REMOVE
+  // ───────────────────────────────────
+  async function removeFromCart(
+    productId: string
+  ) {
     const {
       data: { user },
     } = await supabase.auth.getUser();
 
-    if (!user) return;
+    // GUEST USER
+    if (!user) {
+      const updatedCart =
+        cart.filter(
+          (item) =>
+            item.productId !==
+            productId
+        );
 
+      setCart(updatedCart);
+
+      localStorage.setItem(
+        "guest-cart",
+        JSON.stringify(
+          updatedCart
+        )
+      );
+
+      return;
+    }
+
+    // LOGGED USER
     const { error } =
       await supabase
         .from("cart_items")
         .delete()
         .eq("user_id", user.id)
-        .eq("product_id", productId);
+        .eq(
+          "product_id",
+          productId
+        );
 
     if (error) {
       console.log(error);
+
       return;
     }
 
     setCart((prev) =>
-      prev.filter((item) => item.productId !== productId)
+      prev.filter(
+        (item) =>
+          item.productId !==
+          productId
+      )
     );
   }
 
+  // ───────────────────────────────────
   // UPDATE QUANTITY
+  // ───────────────────────────────────
   async function updateQuantity(
     productId: string,
     quantity: number
@@ -207,43 +431,91 @@ export function CartProvider({
       data: { user },
     } = await supabase.auth.getUser();
 
-    if (!user) return;
-
-    // qty hit 0 → remove the row entirely
     if (quantity <= 0) {
-      await removeFromCart(productId);
+      await removeFromCart(
+        productId
+      );
+
       return;
     }
 
+    // GUEST USER
+    if (!user) {
+      const updatedCart =
+        cart.map((item) =>
+          item.productId ===
+          productId
+            ? {
+                ...item,
+                quantity,
+              }
+            : item
+        );
+
+      setCart(updatedCart);
+
+      localStorage.setItem(
+        "guest-cart",
+        JSON.stringify(
+          updatedCart
+        )
+      );
+
+      return;
+    }
+
+    // LOGGED USER
     const { error } =
       await supabase
         .from("cart_items")
-        .update({ quantity })
+        .update({
+          quantity,
+        })
         .eq("user_id", user.id)
-        .eq("product_id", productId);
+        .eq(
+          "product_id",
+          productId
+        );
 
     if (error) {
       console.log(error);
+
       return;
     }
 
     setCart((prev) =>
       prev.map((item) =>
-        item.productId === productId
-          ? { ...item, quantity }
+        item.productId ===
+        productId
+          ? {
+              ...item,
+              quantity,
+            }
           : item
       )
     );
   }
 
+  // ───────────────────────────────────
   // CLEAR CART
+  // ───────────────────────────────────
   async function clearCart() {
     const {
       data: { user },
     } = await supabase.auth.getUser();
 
-    if (!user) return;
+    // GUEST USER
+    if (!user) {
+      setCart([]);
 
+      localStorage.removeItem(
+        "guest-cart"
+      );
+
+      return;
+    }
+
+    // LOGGED USER
     const { error } =
       await supabase
         .from("cart_items")
@@ -252,36 +524,57 @@ export function CartProvider({
 
     if (error) {
       console.log(error);
+
       return;
     }
 
     setCart([]);
   }
 
+  // ───────────────────────────────────
   // GET QUANTITY
-  function getQuantity(productId: string) {
+  // ───────────────────────────────────
+  function getQuantity(
+    productId: string
+  ) {
     const item = cart.find(
-      (item) => item.productId === productId
+      (item) =>
+        item.productId ===
+        productId
     );
-    return item ? item.quantity : 0;
+
+    return item
+      ? item.quantity
+      : 0;
   }
 
+  // ───────────────────────────────────
   // TOTAL ITEMS
-  const totalItems = cart.reduce(
-    (sum, item) => sum + item.quantity,
-    0
-  );
+  // ───────────────────────────────────
+  const totalItems =
+    cart.reduce(
+      (sum, item) =>
+        sum + item.quantity,
+      0
+    );
 
   return (
     <CartContext.Provider
       value={{
         cart,
+
         addToCart,
+
         removeFromCart,
+
         decrementFromCart,
+
         updateQuantity,
+
         clearCart,
+
         getQuantity,
+
         totalItems,
       }}
     >
@@ -291,7 +584,8 @@ export function CartProvider({
 }
 
 export function useCart() {
-  const context = useContext(CartContext);
+  const context =
+    useContext(CartContext);
 
   if (!context) {
     throw new Error(

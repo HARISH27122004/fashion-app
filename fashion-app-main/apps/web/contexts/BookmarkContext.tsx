@@ -47,56 +47,154 @@ export function BookmarkProvider({
   const [bookmarks, setBookmarks] =
     useState<Bookmark[]>([]);
 
+  // ───────────────────────────────────
   // LOAD BOOKMARKS
-useEffect(() => {
-  let mounted = true;
+  // ───────────────────────────────────
+  useEffect(() => {
+    let mounted = true;
 
-  async function init() {
-    if (!mounted) return;
+    async function init() {
+      if (!mounted) return;
 
-    await loadBookmarks();
-  }
+      await loadBookmarks();
+    }
 
-  init();
+    init();
 
-  const {
-    data: { subscription },
-  } =
-    supabase.auth.onAuthStateChange(
-      async (event) => {
-        // LOGOUT
-        if (
-          event === "SIGNED_OUT"
-        ) {
-          setBookmarks([]);
+    const {
+      data: { subscription },
+    } =
+      supabase.auth.onAuthStateChange(
+        async (event) => {
+          // SIGNED OUT
+          if (
+            event === "SIGNED_OUT"
+          ) {
+            await loadBookmarks();
+          }
+
+          // SIGNED IN
+          if (event === "SIGNED_IN") {
+            const {
+              data: { user },
+            } = await supabase.auth.getUser();
+
+            if (user) {
+              // ───────────────────────────────
+              // MERGE GUEST BOOKMARKS
+              // ───────────────────────────────
+              const guestBookmarks =
+                localStorage.getItem(
+                  "guest-bookmarks"
+                );
+
+              if (guestBookmarks) {
+                const parsedBookmarks =
+                  JSON.parse(
+                    guestBookmarks
+                  );
+
+                // EXISTING USER BOOKMARKS
+                const {
+                  data: existingBookmarks,
+                } = await supabase
+                  .from("bookmarks")
+                  .select("product_id")
+                  .eq("user_id", user.id);
+
+                const existingIds =
+                  new Set(
+                    existingBookmarks?.map(
+                      (item) =>
+                        item.product_id
+                    ) || []
+                  );
+
+                // FILTER NEW
+                const bookmarksToInsert =
+                  parsedBookmarks
+                    .filter(
+                      (
+                        item: Bookmark
+                      ) =>
+                        !existingIds.has(
+                          item.productId
+                        )
+                    )
+                    .map(
+                      (
+                        item: Bookmark
+                      ) => ({
+                        user_id: user.id,
+
+                        product_id:
+                          item.productId,
+                      })
+                    );
+
+                // INSERT
+                if (
+                  bookmarksToInsert.length >
+                  0
+                ) {
+                  await supabase
+                    .from(
+                      "bookmarks"
+                    )
+                    .insert(
+                      bookmarksToInsert
+                    );
+                }
+
+                // CLEAR GUEST STORAGE
+                localStorage.removeItem(
+                  "guest-bookmarks"
+                );
+              }
+            }
+
+            // LOAD FINAL BOOKMARKS
+            await loadBookmarks();
+          }
         }
+      );
 
-        // LOGIN
-        if (
-          event === "SIGNED_IN"
-        ) {
-          await loadBookmarks();
-        }
-      }
-    );
+    return () => {
+      mounted = false;
 
-  return () => {
-    mounted = false;
+      subscription.unsubscribe();
+    };
+  }, []);
 
-    subscription.unsubscribe();
-  };
-}, []);
-
+  // ───────────────────────────────────
+  // LOAD BOOKMARKS
+  // ───────────────────────────────────
   async function loadBookmarks() {
     const {
       data: { user },
     } = await supabase.auth.getUser();
 
+    // ── GUEST USER ───────────────────
     if (!user) {
-      setBookmarks([]);
+      const guestBookmarks =
+        localStorage.getItem(
+          "guest-bookmarks"
+        );
+
+      if (guestBookmarks) {
+        setBookmarks(
+          JSON.parse(
+            guestBookmarks
+          )
+        );
+      } else {
+        setBookmarks([]);
+      }
+
       return;
     }
 
+    // ── LOGGED USER ──────────────────
     const { data, error } =
       await supabase
         .from("bookmarks")
@@ -105,6 +203,7 @@ useEffect(() => {
 
     if (error) {
       console.log(error);
+
       return;
     }
 
@@ -118,7 +217,9 @@ useEffect(() => {
     }
   }
 
+  // ───────────────────────────────────
   // ADD BOOKMARK
+  // ───────────────────────────────────
   async function addBookmark(
     productId: string
   ) {
@@ -126,20 +227,53 @@ useEffect(() => {
       data: { user },
     } = await supabase.auth.getUser();
 
-    if (!user) return;
+    // ── GUEST USER ───────────────────
+    if (!user) {
+      const exists =
+        bookmarks.some(
+          (b) =>
+            b.productId ===
+            productId
+        );
 
+      if (exists) return;
+
+      const updatedBookmarks =
+        [
+          ...bookmarks,
+          { productId },
+        ];
+
+      setBookmarks(
+        updatedBookmarks
+      );
+
+      localStorage.setItem(
+        "guest-bookmarks",
+        JSON.stringify(
+          updatedBookmarks
+        )
+      );
+
+      return;
+    }
+
+    // ── LOGGED USER ──────────────────
     const { error } =
       await supabase
         .from("bookmarks")
         .insert([
           {
             user_id: user.id,
-            product_id: productId,
+
+            product_id:
+              productId,
           },
         ]);
 
     if (error) {
       console.log(error);
+
       return;
     }
 
@@ -149,7 +283,9 @@ useEffect(() => {
     ]);
   }
 
+  // ───────────────────────────────────
   // REMOVE BOOKMARK
+  // ───────────────────────────────────
   async function removeBookmark(
     productId: string
   ) {
@@ -157,17 +293,43 @@ useEffect(() => {
       data: { user },
     } = await supabase.auth.getUser();
 
-    if (!user) return;
+    // ── GUEST USER ───────────────────
+    if (!user) {
+      const updatedBookmarks =
+        bookmarks.filter(
+          (b) =>
+            b.productId !==
+            productId
+        );
 
+      setBookmarks(
+        updatedBookmarks
+      );
+
+      localStorage.setItem(
+        "guest-bookmarks",
+        JSON.stringify(
+          updatedBookmarks
+        )
+      );
+
+      return;
+    }
+
+    // ── LOGGED USER ──────────────────
     const { error } =
       await supabase
         .from("bookmarks")
         .delete()
         .eq("user_id", user.id)
-        .eq("product_id", productId);
+        .eq(
+          "product_id",
+          productId
+        );
 
     if (error) {
       console.log(error);
+
       return;
     }
 
@@ -180,21 +342,28 @@ useEffect(() => {
     );
   }
 
-  // CHECK
+  // ───────────────────────────────────
+  // CHECK BOOKMARK
+  // ───────────────────────────────────
   function isBookmarked(
     productId: string
   ) {
     return bookmarks.some(
       (b) =>
-        b.productId === productId
+        b.productId ===
+        productId
     );
   }
 
-  // TOGGLE
+  // ───────────────────────────────────
+  // TOGGLE BOOKMARK
+  // ───────────────────────────────────
   async function toggleBookmark(
     productId: string
   ) {
-    if (isBookmarked(productId)) {
+    if (
+      isBookmarked(productId)
+    ) {
       await removeBookmark(
         productId
       );
@@ -209,9 +378,13 @@ useEffect(() => {
     <BookmarkContext.Provider
       value={{
         bookmarks,
+
         addBookmark,
+
         removeBookmark,
+
         isBookmarked,
+
         toggleBookmark,
       }}
     >
@@ -222,7 +395,9 @@ useEffect(() => {
 
 export function useBookmarks() {
   const context =
-    useContext(BookmarkContext);
+    useContext(
+      BookmarkContext
+    );
 
   if (!context) {
     throw new Error(
