@@ -1,0 +1,152 @@
+/* ════════════════════════════════════════════════════════════
+   BACKDROP
+════════════════════════════════════════════════════════════ */
+.backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 98;
+  background: transparent;
+  pointer-events: none;
+  transition: background 0.28s ease;
+}
+
+.backdropOpen {
+  background: rgba(0, 0, 0, 0.28);
+  pointer-events: auto;
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+}
+
+/* ════════════════════════════════════════════════════════════
+   DESKTOP DRAWER  — slides DOWN from top  (>768px)
+════════════════════════════════════════════════════════════ */
+.drawer {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 99;
+  background: var(--color-bg);
+  padding: 12px var(--space-xl);
+  border-bottom: 1px solid var(--color-border);
+  /* start hidden above viewport */
+  transform: translateY(-110%);
+  transition: transform 0.32s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.07);
+  will-change: transform;
+  /* vertically center the input row */
+  display: flex;
+  align-items: center;
+  min-height: 72px;
+}
+
+.drawerOpen {
+  transform: translateY(0);
+  z-index:999;
+  height: 20%;
+}
+
+/* ════════════════════════════════════════════════════════════
+   MOBILE DRAWER  — slides UP from bottom  (≤768px)
+════════════════════════════════════════════════════════════ */
+@media (max-width: 768px) {
+  .drawer {
+    /* switch anchor to bottom */
+    top: auto;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    /* start hidden below viewport */
+    transform: translateY(110%);
+    border-bottom: none;
+    border-top: 1px solid var(--color-border);
+    border-radius: 20px 20px 0 0;
+    padding: 16px 20px calc(16px + env(safe-area-inset-bottom, 0px));
+    box-shadow: 0 -4px 32px rgba(0, 0, 0, 0.10);
+    min-height: 80px;
+  }
+
+  .drawerOpen {
+    transform: translateY(0);
+  }
+}
+
+/* ════════════════════════════════════════════════════════════
+   INPUT ROW  (shared)
+════════════════════════════════════════════════════════════ */
+.inputRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 48px;
+  width: 100%;
+  background: var(--color-surface);
+  border: 1.5px solid var(--color-border);
+  border-radius: var(--radius-pill);
+  padding: 0 8px 0 16px;
+  transition: border-color 0.2s ease;
+}
+
+.inputRow:focus-within {
+  border-color: var(--color-text-tertiary);
+}
+
+.searchIcon {
+  color: var(--color-text-tertiary);
+  flex-shrink: 0;
+}
+
+.input {
+  flex: 1;
+  border: none;
+  background: transparent;
+  font-family: var(--font-sans);
+  font-size: var(--text-base);
+  color: var(--color-text-primary);
+  outline: none;
+  min-width: 0;
+}
+
+.input::placeholder {
+  color: var(--color-text-tertiary);
+}
+
+/* Clear × button */
+.clearBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: none;
+  background: var(--color-border);
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: all 0.15s ease;
+}
+
+.clearBtn:hover {
+  background: var(--color-text-tertiary);
+  color: var(--color-white);
+}
+
+/* Cancel text button */
+.closeBtn {
+  flex-shrink: 0;
+  background: none;
+  border: none;
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  font-weight: var(--font-semibold);
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  padding: 0 4px;
+  transition: color 0.15s ease;
+  white-space: nowrap;
+}
+
+.closeBtn:hover {
+  color: var(--color-text-primary);
+}
