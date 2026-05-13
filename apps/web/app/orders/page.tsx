@@ -33,14 +33,15 @@ export default function OrdersPage() {
       return;
     }
 
-    const { data, error } =
-      await supabase
-        .from("orders")
-        .select("*")
-        .eq("user_id", user.id)
-        .order("id", {
-          ascending: false,
-        });
+     const { data, error } =
+       await supabase
+         .from("orders")
+         .select("id, total_amount, orders_status, created_at, address, payment_method, payment_status, customer_name, phone")
+         .eq("user_id", user.id)
+         .order("id", {
+           ascending: false,
+         })
+         .limit(20);
 
     if (error) {
       console.log(error);

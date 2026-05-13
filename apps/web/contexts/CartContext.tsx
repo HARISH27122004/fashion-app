@@ -79,13 +79,13 @@ export function CartProvider({
     )
       return;
 
-    // FETCH EXISTING USER CART
-    const {
-      data: existingItems,
-    } = await supabase
-      .from("cart_items")
-      .select("*")
-      .eq("user_id", userId);
+     // FETCH EXISTING USER CART
+     const {
+       data: existingItems,
+     } = await supabase
+       .from("cart_items")
+       .select("id, product_id, quantity")
+       .eq("user_id", userId);
 
     for (const guestItem of parsedCart) {
       const existing =
@@ -217,12 +217,13 @@ export function CartProvider({
       return;
     }
 
-    // LOGGED USER
-    const { data, error } =
-      await supabase
-        .from("cart_items")
-        .select("*")
-        .eq("user_id", user.id);
+     // LOGGED USER
+     const { data, error } =
+       await supabase
+         .from("cart_items")
+         .select("id, product_id, quantity")
+         .eq("user_id", user.id)
+         .limit(100);
 
     if (error) {
       console.log(error);

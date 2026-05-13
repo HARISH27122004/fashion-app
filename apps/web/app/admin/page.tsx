@@ -82,27 +82,28 @@ export default function AdminPage() {
     router.push("/admin/login");
   }
 
-  // ── Orders logic ──────────────────────────────────────
-  async function fetchOrders() {
-    const { data } = await supabase
-      .from("orders")
-      .select("*")
-      .order("id", { ascending: false });
+   // ── Orders logic ──────────────────────────────────────
+   async function fetchOrders() {
+     const { data } = await supabase
+       .from("orders")
+       .select("id, total_amount, orders_status, created_at, customer_name, phone, address, payment_method, payment_status")
+       .order("id", { ascending: false })
+       .limit(50);
 
     if (data) setOrders(data);
     setOrdersLoading(false);
   }
 
-  async function fetchOrderItems(orderId: number) {
-    if (expandedOrder === orderId) {
-      setExpandedOrder(null);
-      return;
-    }
+   async function fetchOrderItems(orderId: number) {
+     if (expandedOrder === orderId) {
+       setExpandedOrder(null);
+       return;
+     }
 
-    const { data } = await supabase
-      .from("order_items")
-      .select("*")
-      .eq("order_id", orderId);
+     const { data } = await supabase
+       .from("order_items")
+       .select("id, product_name, product_image, quantity, price")
+       .eq("order_id", orderId);
 
     setOrderItems((prev: any) => ({ ...prev, [orderId]: data || [] }));
     setExpandedOrder(orderId);
@@ -116,9 +117,12 @@ export default function AdminPage() {
     fetchOrders();
   }
 
-  // ── Offers / Notifications logic ──────────────────────
-  async function fetchProducts() {
-    const { data, error } = await supabase.from("products").select("*");
+   // ── Offers / Notifications logic ──────────────────────
+   async function fetchProducts() {
+     const { data, error } = await supabase
+       .from("products")
+       .select("id, name, price, original_price, discount_percent, image, category, inStock, sizes")
+       .limit(100);
     if (error) { console.error(error); return; }
     if (data) setProducts(data.map((p) => ({ ...p, id: String(p.id) })));
   }
